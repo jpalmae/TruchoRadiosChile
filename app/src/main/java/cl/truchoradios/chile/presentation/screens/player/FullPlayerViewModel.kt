@@ -25,6 +25,8 @@ data class PlayerUiState(
     val isBuffering: Boolean = false,
     val error: String? = null,
     val isFavorite: Boolean = false,
+    val canSeekBack: Boolean = false,
+    val rewindSeconds: Int = 0,
 )
 
 @HiltViewModel
@@ -57,7 +59,7 @@ class FullPlayerViewModel @Inject constructor(
                 )
                 _uiState.value = _uiState.value.copy(radio = radio)
 
-                // 🚀 AUTO-PLAY: reproducir inmediatamente al seleccionar
+                // Auto-play on first load
                 if (!hasAutoPlayed) {
                     hasAutoPlayed = true
                     startPlayback(radio)
@@ -82,20 +84,28 @@ class FullPlayerViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(error = err)
             }
         }
+
+        viewModelScope.launch {
+            playerManager.canSeekBack.collect { can ->
+                _uiState.value = _uiState.value.copy(canSeekBack = can)
+            }
+        }
+
+        viewModelScope.launch {
+            playerManager.rewindSeconds.collect { seconds ->
+                _uiState.value = _uiState.value.copy(rewindSeconds = seconds)
+            }
+        }
     }
 
     private fun startPlayback(radio: Radio) {
-        // Start the foreground service for media notification
         val sessionToken = SessionToken(
             appContext,
             ComponentName(appContext, RadioPlayerService::class.java)
         )
-        // This connects the MediaController to the service, which triggers foreground notification
         val controllerFuture = MediaController.Builder(appContext, sessionToken).buildAsync()
         controllerFuture.addListener({
-            try {
-                controllerFuture.get()
-            } catch (_: Exception) { }
+            try { controllerFuture.get() } catch (_: Exception) { }
         }, { it.run() })
 
         playerManager.play(radio)
@@ -109,6 +119,11 @@ class FullPlayerViewModel @Inject constructor(
         playerManager.stop()
     }
 
+    fun seekBack10() { playerManager.seekBackSeconds(10) }
+    fun seekBack30() { playerManager.seekBackSeconds(30) }
+    fun seekBack60() { playerManager.seekBackSeconds(60) }
+    fun seekToLive() { playerManager.seekToLive() }
+
     fun toggleFavorite() {
         val current = _uiState.value.isFavorite
         _uiState.value = _uiState.value.copy(isFavorite = !current)
@@ -119,6 +134,5 @@ class FullPlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Don't stop playback - let the service handle it
     }
 }

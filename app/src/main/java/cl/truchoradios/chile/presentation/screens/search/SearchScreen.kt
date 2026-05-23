@@ -1,6 +1,5 @@
 package cl.truchoradios.chile.presentation.screens.search
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,11 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -32,13 +28,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-private val DarkBackground = Color(0xFF121212)
-private val CardBackground = Color(0xFF1E1E1E)
-private val SearchBarBackground = Color(0xFF2A2A2A)
-private val PrimaryText = Color.White
-private val SecondaryText = Color(0xFFB0B0B0)
-private val AccentRed = Color(0xFFD52B1E)
 
 data class SearchUiState(val query: String = "", val results: List<Radio> = emptyList())
 
@@ -73,6 +62,7 @@ class SearchViewModel @Inject constructor(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     onRadioClick: (String) -> Unit,
@@ -81,54 +71,40 @@ fun SearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkBackground)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar with back button and search field
-            Row(
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Buscar") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            // Search field
+            OutlinedTextField(
+                value = uiState.query,
+                onValueChange = { viewModel.onQueryChange(it) },
+                placeholder = { Text("Buscar radios…") },
+                singleLine = true,
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = PrimaryText,
-                    )
-                }
-                OutlinedTextField(
-                    value = uiState.query,
-                    onValueChange = { viewModel.onQueryChange(it) },
-                    placeholder = {
-                        Text(
-                            "Buscar radios…",
-                            color = SecondaryText,
-                        )
-                    },
-                    singleLine = true,
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = SecondaryText)
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(16.dp)),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = PrimaryText,
-                        unfocusedTextColor = PrimaryText,
-                        focusedContainerColor = SearchBarBackground,
-                        unfocusedContainerColor = SearchBarBackground,
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        cursorColor = AccentRed,
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                )
-            }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(16.dp),
+            )
 
             // Content
             if (uiState.results.isEmpty() && uiState.query.length >= 2) {
@@ -138,8 +114,8 @@ fun SearchScreen(
                 ) {
                     Text(
                         "No se encontraron radios",
-                        color = SecondaryText,
                         style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
@@ -162,39 +138,44 @@ fun SearchScreen(
 
 @Composable
 private fun RadioListItem(radio: Radio, onClick: () -> Unit) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(CardBackground)
-            .clickable { onClick() }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 1.dp,
     ) {
-        RadioImage(
-            imageUrl = radio.imageUrl,
-            name = radio.name,
-            size = 56.dp,
-            cornerRadius = 12.dp,
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = radio.name,
-                color = PrimaryText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyLarge,
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioImage(
+                imageUrl = radio.imageUrl,
+                name = radio.name,
+                size = 56.dp,
+                cornerRadius = 12.dp,
             )
-            Text(
-                text = listOf(radio.genres.firstOrNull(), radio.frequency)
-                    .filter { !it.isNullOrBlank() }
-                    .joinToString(" · "),
-                color = SecondaryText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = radio.name,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = listOf(radio.genres.firstOrNull(), radio.frequency)
+                        .filter { !it.isNullOrBlank() }
+                        .joinToString(" · "),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }

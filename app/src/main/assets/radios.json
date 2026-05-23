@@ -3799,149 +3799,166 @@
     {
       "id": "region_01",
       "name": "Arica y Parinacota",
-      "code": "ARICA_Y_PARINACOTA"
+      "code": "ARICA_Y_PARINACOTA",
+      "radioCount": 2
     },
     {
       "id": "region_02",
       "name": "Tarapacá",
-      "code": "TARAPACÁ"
+      "code": "TARAPACÁ",
+      "radioCount": 5
     },
     {
       "id": "region_03",
       "name": "Antofagasta",
-      "code": "ANTOFAGASTA"
+      "code": "ANTOFAGASTA",
+      "radioCount": 6
     },
     {
       "id": "region_04",
       "name": "Atacama",
-      "code": "ATACAMA"
+      "code": "ATACAMA",
+      "radioCount": 7
     },
     {
       "id": "region_05",
       "name": "Coquimbo",
-      "code": "COQUIMBO"
+      "code": "COQUIMBO",
+      "radioCount": 5
     },
     {
       "id": "region_06",
       "name": "Valparaíso",
-      "code": "VALPARAÍSO"
+      "code": "VALPARAÍSO",
+      "radioCount": 11
     },
     {
       "id": "region_07",
       "name": "Región Metropolitana",
-      "code": "REGIÓN_METROPOLITANA"
+      "code": "REGIÓN_METROPOLITANA",
+      "radioCount": 35
     },
     {
       "id": "region_08",
       "name": "O'Higgins",
-      "code": "OHIGGINS"
+      "code": "OHIGGINS",
+      "radioCount": 2
     },
     {
       "id": "region_09",
       "name": "Maule",
-      "code": "MAULE"
+      "code": "MAULE",
+      "radioCount": 9
     },
     {
       "id": "region_10",
       "name": "Ñuble",
-      "code": "ÑUBLE"
+      "code": "ÑUBLE",
+      "radioCount": 3
     },
     {
       "id": "region_11",
       "name": "Biobío",
-      "code": "BIOBÍO"
+      "code": "BIOBÍO",
+      "radioCount": 11
     },
     {
       "id": "region_12",
       "name": "La Araucanía",
-      "code": "LA_ARAUCANÍA"
+      "code": "LA_ARAUCANÍA",
+      "radioCount": 6
     },
     {
       "id": "region_13",
       "name": "Los Ríos",
-      "code": "LOS_RÍOS"
+      "code": "LOS_RÍOS",
+      "radioCount": 3
     },
     {
       "id": "region_14",
       "name": "Los Lagos",
-      "code": "LOS_LAGOS"
+      "code": "LOS_LAGOS",
+      "radioCount": 4
     },
     {
       "id": "region_15",
       "name": "Aysén",
-      "code": "AYSÉN"
+      "code": "AYSÉN",
+      "radioCount": 2
     },
     {
       "id": "region_16",
       "name": "Magallanes",
-      "code": "MAGALLANES"
+      "code": "MAGALLANES",
+      "radioCount": 1
     },
     {
       "id": "region_chile",
       "name": "Chile",
-      "code": "CHILE"
+      "code": "CHILE",
+      "radioCount": 159
     }
   ],
   "genres": [
     {
       "id": "pop",
       "name": "Pop",
-      "radioCount": 41
+      "radioCount": 25
     },
     {
       "id": "music",
       "name": "Music",
-      "radioCount": 25
+      "radioCount": 12
     },
     {
       "id": "entretenimiento",
       "name": "Entretenimiento",
-      "radioCount": 25
+      "radioCount": 17
     },
     {
       "id": "news",
       "name": "News",
-      "radioCount": 21
+      "radioCount": 16
     },
     {
       "id": "rock",
       "name": "Rock",
-      "radioCount": 21
+      "radioCount": 18
     },
     {
       "id": "noticias",
       "name": "Noticias",
-      "radioCount": 21
+      "radioCount": 19
     },
     {
       "id": "80s",
       "name": "80S",
-      "radioCount": 19
+      "radioCount": 17
     },
     {
       "id": "hits",
       "name": "Hits",
-      "radioCount": 17
+      "radioCount": 7
     },
     {
       "id": "adult_contemporary",
       "name": "Adult Contemporary",
-      "radioCount": 15
+      "radioCount": 13
     },
     {
       "id": "90s",
       "name": "90S",
-      "radioCount": 12
+      "radioCount": 10
     },
     {
       "id": "talk",
       "name": "Talk",
-      "radioCount": 11
+      "radioCount": 10
     },
     {
       "id": "pop_rock",
       "name": "Pop Rock",
-      "radioCount": 11
+      "radioCount": 10
     },
     {
       "id": "radio_hablada",
@@ -3956,12 +3973,12 @@
     {
       "id": "música_en_español",
       "name": "Música En Español",
-      "radioCount": 9
+      "radioCount": 8
     },
     {
       "id": "jazz",
       "name": "Jazz",
-      "radioCount": 7
+      "radioCount": 5
     },
     {
       "id": "2000s",
@@ -3971,32 +3988,32 @@
     {
       "id": "pop_music",
       "name": "Pop Music",
-      "radioCount": 7
+      "radioCount": 6
     },
     {
       "id": "música",
       "name": "Música",
-      "radioCount": 7
+      "radioCount": 5
     },
     {
       "id": "vallenar",
       "name": "Vallenar",
-      "radioCount": 7
+      "radioCount": 4
     },
     {
       "id": "classical",
       "name": "Classical",
-      "radioCount": 7
+      "radioCount": 6
     },
     {
       "id": "indie",
       "name": "Indie",
-      "radioCount": 7
+      "radioCount": 5
     },
     {
       "id": "classic_rock",
       "name": "Classic Rock",
-      "radioCount": 6
+      "radioCount": 5
     },
     {
       "id": "música_en_español_e_inglés",
@@ -4006,17 +4023,17 @@
     {
       "id": "musica_romantica",
       "name": "Musica Romantica",
-      "radioCount": 6
+      "radioCount": 5
     },
     {
       "id": "local_news",
       "name": "Local News",
-      "radioCount": 6
+      "radioCount": 5
     },
     {
       "id": "university_radio",
       "name": "University Radio",
-      "radioCount": 6
+      "radioCount": 3
     },
     {
       "id": "deportes",
@@ -4031,7 +4048,7 @@
     {
       "id": "dance",
       "name": "Dance",
-      "radioCount": 5
+      "radioCount": 4
     }
   ]
 }

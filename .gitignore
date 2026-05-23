@@ -10,3 +10,5 @@
 local.properties
 *.apk
 /app/build
+*.jks
+play_store_assets/

@@ -56,12 +56,19 @@ class RadioPlayerManager @Inject constructor(
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     val playbackState: StateFlow<PlaybackState> = _playbackState
 
+    private val _canSeekBack = MutableStateFlow(false)
+    val canSeekBack: StateFlow<Boolean> = _canSeekBack
+
+    private val _rewindSeconds = MutableStateFlow(0)
+    val rewindSeconds: StateFlow<Int> = _rewindSeconds
+
     init {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _isPlaying.value = isPlaying
                 if (isPlaying) {
                     _playbackState.value = PlaybackState.PLAYING
+                    _canSeekBack.value = player.isCurrentMediaItemSeekable
                 }
             }
 
@@ -74,6 +81,7 @@ class RadioPlayerManager @Inject constructor(
                         if (_isPlaying.value) {
                             _playbackState.value = PlaybackState.PLAYING
                         }
+                        _canSeekBack.value = player.isCurrentMediaItemSeekable
                     }
                     Player.STATE_ENDED -> _playbackState.value = PlaybackState.IDLE
                 }
@@ -93,6 +101,8 @@ class RadioPlayerManager @Inject constructor(
         _isBuffering.value = true
         _currentRadio.value = radio
         _playbackState.value = PlaybackState.BUFFERING
+        _rewindSeconds.value = 0
+        _canSeekBack.value = false
 
         player.stop()
         player.clearMediaItems()
@@ -108,11 +118,33 @@ class RadioPlayerManager @Inject constructor(
         val mediaItem = MediaItem.Builder()
             .setUri(radio.streamUrl.toUri())
             .setMediaMetadata(metadataBuilder.build())
+            .setLiveConfiguration(
+                MediaItem.LiveConfiguration.Builder()
+                    .setMaxOffsetMs(60_000L)
+                    .setTargetOffsetMs(30_000L)
+                    .build()
+            )
             .build()
 
         player.setMediaItem(mediaItem)
         player.prepare()
         player.playWhenReady = true
+    }
+
+    fun seekBackSeconds(seconds: Int) {
+        if (!player.isCurrentMediaItemSeekable) return
+        val currentPosition = player.currentPosition
+        val newPosition = currentPosition - (seconds * 1000L)
+        val minPosition = player.duration.coerceAtMost(0L)
+        player.seekTo(newPosition.coerceAtLeast(minPosition))
+        _rewindSeconds.value = _rewindSeconds.value + seconds
+    }
+
+    fun seekToLive() {
+        if (player.isCurrentMediaItemSeekable) {
+            player.seekToDefaultPosition()
+            _rewindSeconds.value = 0
+        }
     }
 
     fun stop() {
@@ -122,6 +154,8 @@ class RadioPlayerManager @Inject constructor(
         _isBuffering.value = false
         _currentRadio.value = null
         _playbackState.value = PlaybackState.IDLE
+        _rewindSeconds.value = 0
+        _canSeekBack.value = false
     }
 
     fun getCurrentRadio(): Radio? = _currentRadio.value

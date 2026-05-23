@@ -20,6 +20,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("../trucho-release-key.jks")
+            storePassword = "trucho2025"
+            keyAlias = "trucho"
+            keyPassword = "trucho2025"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -28,6 +37,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

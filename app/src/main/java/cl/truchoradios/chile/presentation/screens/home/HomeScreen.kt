@@ -1,39 +1,56 @@
 package cl.truchoradios.chile.presentation.screens.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import cl.truchoradios.chile.domain.model.Radio
-import cl.truchoradios.chile.presentation.components.RadioImage
 import cl.truchoradios.chile.domain.model.Genre
+import cl.truchoradios.chile.domain.model.Radio
 import cl.truchoradios.chile.domain.model.Region
+import cl.truchoradios.chile.presentation.components.RadioImage
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     onRadioClick: (String) -> Unit,
@@ -45,86 +62,109 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Box(Modifier.fillMaxSize()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Trucho Radios Chile",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Buscar",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Ajustes",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
         if (uiState.isLoading) {
             CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
-                color = Color(0xFFD52B1E)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                color = MaterialTheme.colorScheme.primary
             )
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 160.dp) // space for mini player + bottom bar
             ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "TRUCHO",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color(0xFFD52B1E),
-                        letterSpacing = 2.sp
-                    )
-                    Row {
-                        IconButton(onClick = onSearchClick) {
-                            Icon(Icons.Default.Search, "Buscar", tint = Color.White)
-                        }
-                        IconButton(onClick = onSettingsClick) {
-                            Icon(Icons.Default.Settings, "Ajustes", tint = Color(0xFF808080))
-                        }
-                    }
-                }
-
-                // Radios Populares - Horizontal scroll
-                SectionHeader("🔥 Populares") {
+                // ── Popular Radios ──────────────────────────────────────────
+                SectionHeader(title = "🔥 Populares", onSeeAll = {
                     onSeeAllClick("popular", "all")
-                }
+                })
+
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(uiState.popularRadios) { radio ->
-                        PopularRadioCard(radio = radio, onClick = { onRadioClick(radio.id) })
+                        RadioCard(
+                            radio = radio,
+                            onClick = { onRadioClick(radio.id) }
+                        )
                     }
                 }
 
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(24.dp))
 
-                // Regiones - Chips
-                SectionHeader("📍 Regiones")
+                // ── Regions ────────────────────────────────────────────────
+                SectionHeader(title = "📍 Regiones")
+
                 FlowRow(
-                    modifier = Modifier.padding(horizontal = 20.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    uiState.regions.filter { it.radioCount > 0 }.forEach { region ->
-                        DarkChip(text = "${region.name} (${region.radioCount})") {
-                            onSeeAllClick("region", region.id)
+                    uiState.regions
+                        .filter { it.radioCount > 0 }
+                        .forEach { region ->
+                            RegionChip(
+                                region = region,
+                                onClick = { onSeeAllClick("region", region.id) }
+                            )
                         }
-                    }
                 }
 
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(24.dp))
 
-                // Géneros - Chips
-                SectionHeader("🎵 Géneros")
+                // ── Genres ─────────────────────────────────────────────────
+                SectionHeader(title = "🎵 Géneros")
+
                 FlowRow(
-                    modifier = Modifier.padding(horizontal = 20.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     uiState.genres.forEach { genre ->
-                        DarkChip(text = "${genre.icon ?: "📻"} ${genre.name}") {
-                            onSeeAllClick("genre", genre.id)
-                        }
+                        GenreChip(
+                            genre = genre,
+                            onClick = { onSeeAllClick("genre", genre.id) }
+                        )
                     }
                 }
 
@@ -134,60 +174,84 @@ fun HomeScreen(
     }
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Section Header
+// ──────────────────────────────────────────────────────────────────────────────
+
 @Composable
-private fun SectionHeader(title: String, onSeeAll: (() -> Unit)? = null) {
+private fun SectionHeader(
+    title: String,
+    onSeeAll: (() -> Unit)? = null,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            title,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = MaterialTheme.colorScheme.onBackground
         )
         onSeeAll?.let {
             TextButton(onClick = it) {
-                Text("Ver todo", color = Color(0xFFD52B1E), fontSize = 13.sp)
+                Text(
+                    text = "Ver todo",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Radio Card (Popular)
+// ──────────────────────────────────────────────────────────────────────────────
+
 @Composable
-private fun PopularRadioCard(radio: Radio, onClick: () -> Unit) {
+private fun RadioCard(
+    radio: Radio,
+    onClick: () -> Unit,
+) {
     Card(
         modifier = Modifier
-            .width(130.dp)
+            .width(140.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             RadioImage(
                 imageUrl = radio.imageUrl,
                 name = radio.name,
-                size = 130.dp,
-                cornerRadius = 16.dp
+                size = 120.dp,
+                cornerRadius = 12.dp
             )
-            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
+            Column(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+            ) {
                 Text(
-                    radio.name,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    text = radio.name,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (radio.frequency.isNotBlank()) {
                     Text(
-                        radio.frequency,
-                        fontSize = 10.sp,
-                        color = Color(0xFF808080)
+                        text = radio.frequency,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -195,19 +259,54 @@ private fun PopularRadioCard(radio: Radio, onClick: () -> Unit) {
     }
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Region Chip
+// ──────────────────────────────────────────────────────────────────────────────
+
 @Composable
-private fun DarkChip(text: String, onClick: () -> Unit) {
-    Surface(
+private fun RegionChip(
+    region: Region,
+    onClick: () -> Unit,
+) {
+    AssistChip(
         onClick = onClick,
+        label = {
+            Text(
+                text = "${region.name} (${region.radioCount})",
+                style = MaterialTheme.typography.labelMedium
+            )
+        },
         shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF2A2A2A),
-        contentColor = Color.White
-    ) {
-        Text(
-            text,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            fontSize = 13.sp,
-            color = Color.White
-        )
-    }
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+        ),
+        border = null
+    )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Genre Chip
+// ──────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun GenreChip(
+    genre: Genre,
+    onClick: () -> Unit,
+) {
+    AssistChip(
+        onClick = onClick,
+        label = {
+            Text(
+                text = "${genre.icon ?: "📻"} ${genre.name}",
+                style = MaterialTheme.typography.labelMedium
+            )
+        },
+        shape = RoundedCornerShape(20.dp),
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+        ),
+        border = null
+    )
 }

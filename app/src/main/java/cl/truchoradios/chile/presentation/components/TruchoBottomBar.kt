@@ -1,21 +1,18 @@
 package cl.truchoradios.chile.presentation.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.vector.ImageVector
+
+private val RedAccent = Color(0xFFD52B1E)
 
 private data class BottomNavItem(
     val route: String,
@@ -36,45 +33,30 @@ fun TruchoBottomBar(
 ) {
     NavigationBar(
         modifier = Modifier.fillMaxWidth(),
-        containerColor = Color(0xFF1A1A1A),
-        contentColor = Color.White,
-        tonalElevation = 8.dp,
+        containerColor = Color.White,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 3.dp,
     ) {
         NAV_ITEMS.forEach { item ->
             val selected = currentRoute == item.route
             NavigationBarItem(
                 icon = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            item.icon,
-                            contentDescription = item.label,
-                            tint = if (selected) Color(0xFFD52B1E) else Color(0xFF808080)
-                        )
-                        if (selected) {
-                            Spacer(Modifier.height(2.dp))
-                            Box(
-                                modifier = Modifier
-                                    .width(4.dp)
-                                    .height(4.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFD52B1E))
-                            )
-                        }
-                    }
+                    Icon(
+                        item.icon,
+                        contentDescription = item.label,
+                    )
                 },
                 label = {
-                    Text(
-                        item.label,
-                        fontSize = 10.sp,
-                        color = if (selected) Color(0xFFD52B1E) else Color(0xFF808080)
-                    )
+                    Text(item.label)
                 },
                 selected = selected,
                 onClick = { onNavigate(item.route) },
                 colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = Color.Transparent,
+                    selectedIconColor = RedAccent,
+                    selectedTextColor = RedAccent,
+                    unselectedIconColor = Color(0xFF808080),
+                    unselectedTextColor = Color(0xFF808080),
+                    indicatorColor = RedAccent.copy(alpha = 0.12f),
                 )
             )
         }

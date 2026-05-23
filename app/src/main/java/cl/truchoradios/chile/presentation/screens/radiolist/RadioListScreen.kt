@@ -1,6 +1,5 @@
 package cl.truchoradios.chile.presentation.screens.radiolist
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -31,12 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private val DarkBackground = Color(0xFF121212)
-private val CardBackground = Color(0xFF1E1E1E)
-private val PrimaryText = Color.White
-private val SecondaryText = Color(0xFFB0B0B0)
-private val AccentRed = Color(0xFFD52B1E)
-
 data class RadioListUiState(val title: String = "", val radios: List<Radio> = emptyList())
 
 @HiltViewModel
@@ -52,14 +44,16 @@ class RadioListViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            val regionName = repository.getRegions().find { it.id == filterValue }?.name
+            val genreName = repository.getGenres().find { it.id == filterValue }?.name
             val flow = when (filterType) {
-                "region" -> repository.getRadiosByRegion(filterValue)
-                "genre" -> repository.getRadiosByGenre(filterValue)
+                "region" -> repository.getRadiosByRegion(regionName ?: filterValue)
+                "genre" -> repository.getRadiosByGenre(genreName ?: filterValue)
                 else -> repository.getAllRadios()
             }
             val title = when (filterType) {
-                "region" -> repository.getRegions().find { it.id == filterValue }?.name ?: "Radios"
-                "genre" -> repository.getGenres().find { it.id == filterValue }?.name ?: "Radios"
+                "region" -> regionName ?: "Radios"
+                "genre" -> genreName ?: "Radios"
                 else -> "Todas las Radios"
             }
             _uiState.value = _uiState.value.copy(title = title)
@@ -81,6 +75,7 @@ class RadioListViewModel @Inject constructor(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RadioListScreen(
     onRadioClick: (String) -> Unit,
@@ -89,76 +84,77 @@ fun RadioListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkBackground)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar with back button and title
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = PrimaryText,
-                    )
-                }
-                Text(
-                    uiState.title,
-                    color = PrimaryText,
-                    style = MaterialTheme.typography.titleLarge,
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(uiState.title) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(uiState.radios) { radio ->
+                RadioListItem(
+                    radio = radio,
+                    onClick = { onRadioClick(radio.id) },
                 )
             }
+        }
+    }
+}
 
-            // Content
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(uiState.radios) { radio ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(CardBackground)
-                            .clickable { onRadioClick(radio.id) }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioImage(
-                            imageUrl = radio.imageUrl,
-                            name = radio.name,
-                            size = 56.dp,
-                            cornerRadius = 12.dp,
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = radio.name,
-                                color = PrimaryText,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                text = listOf(radio.genres.firstOrNull(), radio.frequency)
-                                    .filter { !it.isNullOrBlank() }
-                                    .joinToString(" · "),
-                                color = SecondaryText,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
-                }
+@Composable
+private fun RadioListItem(radio: Radio, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 1.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioImage(
+                imageUrl = radio.imageUrl,
+                name = radio.name,
+                size = 56.dp,
+                cornerRadius = 12.dp,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = radio.name,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = listOf(radio.genres.firstOrNull(), radio.frequency)
+                        .filter { !it.isNullOrBlank() }
+                        .joinToString(" · "),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }
