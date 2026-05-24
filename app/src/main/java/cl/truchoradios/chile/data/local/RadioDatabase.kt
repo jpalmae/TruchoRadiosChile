@@ -13,7 +13,7 @@ import cl.truchoradios.chile.data.local.entity.RecentEntity
 
 @Database(
     entities = [RadioEntity::class, FavoriteEntity::class, RecentEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class RadioDatabase : RoomDatabase() {
