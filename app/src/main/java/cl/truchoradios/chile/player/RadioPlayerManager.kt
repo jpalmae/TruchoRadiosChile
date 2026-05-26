@@ -1,6 +1,7 @@
 package cl.truchoradios.chile.player
 
 import android.content.Context
+import android.content.Intent
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
@@ -10,7 +11,11 @@ import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import cl.truchoradios.chile.domain.model.Radio
+import cl.truchoradios.chile.service.RadioPlayerService
+import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -73,6 +78,10 @@ class RadioPlayerManager @Inject constructor(
     private val _volume = MutableStateFlow(1f)
     val volume: StateFlow<Float> = _volume
 
+    // MediaController for foreground service + notification
+    private var mediaControllerFuture: ListenableFuture<MediaController>? = null
+    private var mediaController: MediaController? = null
+
     init {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -103,6 +112,22 @@ class RadioPlayerManager @Inject constructor(
                 _playbackState.value = PlaybackState.ERROR
             }
         })
+
+        // Connect to MediaSession service for foreground + notification
+        initMediaController()
+    }
+
+    private fun initMediaController() {
+        val sessionToken = SessionToken(context, android.content.ComponentName(context, RadioPlayerService::class.java))
+        mediaControllerFuture = MediaController.Builder(context, sessionToken)
+            .buildAsync()
+        mediaControllerFuture?.addListener({
+            try {
+                mediaController = mediaControllerFuture?.get()
+            } catch (e: Exception) {
+                // Controller connection failed — playback still works, just no notification
+            }
+        }, { it.run() })
     }
 
     fun play(radio: Radio) {

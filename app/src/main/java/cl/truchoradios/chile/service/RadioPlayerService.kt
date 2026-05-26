@@ -1,10 +1,14 @@
 package cl.truchoradios.chile.service
 
-import cl.truchoradios.chile.player.RadioPlayerManager
 import android.content.Intent
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import cl.truchoradios.chile.player.RadioPlayerManager
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -16,6 +20,7 @@ class RadioPlayerService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
 
+    @UnstableApi
     override fun onCreate() {
         super.onCreate()
 
@@ -31,6 +36,14 @@ class RadioPlayerService : MediaSessionService() {
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailableSessionCommands(MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS)
                         .build()
+                }
+
+                override fun onAddMediaItems(
+                    mediaSession: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    mediaItems: MutableList<MediaItem>
+                ): ListenableFuture<MutableList<MediaItem>> {
+                    return Futures.immediateFuture(mediaItems)
                 }
             })
             .build()
