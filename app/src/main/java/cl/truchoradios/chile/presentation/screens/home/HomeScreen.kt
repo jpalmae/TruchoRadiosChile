@@ -111,10 +111,27 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = 160.dp) // space for mini player + bottom bar
+                    .padding(bottom = 160.dp)
             ) {
-                // ── Popular Radios ──────────────────────────────────────────
-                SectionHeader(title = "🔥 Populares", onSeeAll = {
+                // Recientes
+                if (uiState.recentRadios.isNotEmpty()) {
+                    SectionHeader(title = "\u23F1 Recientes")
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(uiState.recentRadios, key = { it.id }) { radio ->
+                            RadioCard(
+                                radio = radio,
+                                onClick = { onRadioClick(radio.id) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(24.dp))
+                }
+
+                // Populares
+                SectionHeader(title = "\uD83D\uDD25 Populares", onSeeAll = {
                     onSeeAllClick("popular", "all")
                 })
 
@@ -122,7 +139,7 @@ fun HomeScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(uiState.popularRadios) { radio ->
+                    items(uiState.popularRadios, key = { it.id }) { radio ->
                         RadioCard(
                             radio = radio,
                             onClick = { onRadioClick(radio.id) }
@@ -132,8 +149,8 @@ fun HomeScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // ── Regions ────────────────────────────────────────────────
-                SectionHeader(title = "📍 Regiones")
+                // Regiones
+                SectionHeader(title = "\uD83D\uDCCD Regiones")
 
                 FlowRow(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -152,8 +169,8 @@ fun HomeScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // ── Genres ─────────────────────────────────────────────────
-                SectionHeader(title = "🎵 Géneros")
+                // Géneros
+                SectionHeader(title = "\uD83C\uDFB5 Géneros")
 
                 FlowRow(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -173,10 +190,6 @@ fun HomeScreen(
         }
     }
 }
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Section Header
-// ──────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun SectionHeader(
@@ -208,10 +221,6 @@ private fun SectionHeader(
         }
     }
 }
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Radio Card (Popular)
-// ──────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun RadioCard(
@@ -259,10 +268,6 @@ private fun RadioCard(
     }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Region Chip
-// ──────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun RegionChip(
     region: Region,
@@ -285,10 +290,6 @@ private fun RegionChip(
     )
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Genre Chip
-// ──────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun GenreChip(
     genre: Genre,
@@ -298,7 +299,7 @@ private fun GenreChip(
         onClick = onClick,
         label = {
             Text(
-                text = "${genre.icon ?: "📻"} ${genre.name}",
+                text = "${genre.icon ?: "\uD83D\uDCFB"} ${genre.name}",
                 style = MaterialTheme.typography.labelMedium
             )
         },

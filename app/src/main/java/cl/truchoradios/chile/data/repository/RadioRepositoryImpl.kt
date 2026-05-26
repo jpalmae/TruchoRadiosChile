@@ -42,18 +42,23 @@ class RadioRepositoryImpl @Inject constructor(
     private val recentDao: RecentDao,
 ) {
     private val gson = Gson()
+    @Volatile
     private var cachedData: RadiosJson? = null
 
     private fun loadData(): RadiosJson {
-        if (cachedData != null) return cachedData!!
-        val json = context.assets.open("radios.json").bufferedReader().use { it.readText() }
-        val type = object : TypeToken<RadiosJson>() {}.type
-        cachedData = gson.fromJson(json, type)
-        return cachedData!!
+        cachedData?.let { return it }
+        return synchronized(this) {
+            cachedData ?: run {
+                val json = context.assets.open("radios.json").bufferedReader().use { it.readText() }
+                val type = object : TypeToken<RadiosJson>() {}.type
+                val data: RadiosJson = gson.fromJson(json, type)
+                cachedData = data
+                data
+            }
+        }
     }
 
     fun getAllRadios(): Flow<List<RadioEntity>> = radioDao.getAllRadios()
-
     suspend fun getRadioById(id: String): RadioEntity? = radioDao.getRadioById(id)
 
     fun getRegions(): List<Region> = loadData().regions.map {

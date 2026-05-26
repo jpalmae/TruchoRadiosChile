@@ -1,8 +1,6 @@
 package cl.truchoradios.chile.presentation.screens.player
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,17 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Update
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -31,32 +27,37 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import cl.truchoradios.chile.player.RadioPlayerManager
 import cl.truchoradios.chile.presentation.components.RadioImage
+import cl.truchoradios.chile.presentation.components.SpectrumVisualizer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullPlayerScreen(
     onBack: () -> Unit,
+    playerManager: RadioPlayerManager,
     viewModel: FullPlayerViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val radio = uiState.radio
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -81,19 +82,24 @@ fun FullPlayerScreen(
                     .padding(horizontal = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
 
-                // Album art
                 RadioImage(
                     imageUrl = radio.imageUrl,
                     name = radio.name,
-                    size = 200.dp,
+                    size = 180.dp,
                     cornerRadius = 16.dp
                 )
 
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(16.dp))
 
-                // Radio name
+                SpectrumVisualizer(
+                    isPlaying = uiState.isPlaying,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(Modifier.height(16.dp))
+
                 Text(
                     text = radio.name,
                     style = MaterialTheme.typography.headlineSmall,
@@ -104,7 +110,6 @@ fun FullPlayerScreen(
 
                 Spacer(Modifier.height(4.dp))
 
-                // Genre
                 if (radio.genres.isNotEmpty()) {
                     Text(
                         text = radio.genres.joinToString(", "),
@@ -114,7 +119,6 @@ fun FullPlayerScreen(
                     )
                 }
 
-                // Frequency / City
                 if (radio.frequency.isNotBlank() || radio.city.isNotBlank()) {
                     Spacer(Modifier.height(2.dp))
                     Text(
@@ -127,16 +131,13 @@ fun FullPlayerScreen(
                     )
                 }
 
-                // Status
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     text = when {
                         uiState.isBuffering -> "Conectando..."
-                        uiState.isPlaying -> if (uiState.rewindSeconds > 0)
-                            "En vivo (-${uiState.rewindSeconds}s)"
-                            else "En vivo"
+                        uiState.isPlaying -> "En vivo"
                         uiState.error != null -> "Error de conexión"
-                        else -> ""
+                        else -> "Pausado"
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = when {
@@ -147,24 +148,6 @@ fun FullPlayerScreen(
                     }
                 )
 
-                // Rewind indicator
-                if (uiState.rewindSeconds > 0 && uiState.isPlaying) {
-                    Spacer(Modifier.height(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                    ) {
-                        Text(
-                            text = "-${uiState.rewindSeconds}s",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                // Error detail
                 uiState.error?.let { err ->
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -174,57 +157,38 @@ fun FullPlayerScreen(
                     )
                 }
 
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(16.dp))
 
-                // Rewind controls
-                if (uiState.canSeekBack) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RewindButton(seconds = 10, onClick = { viewModel.seekBack10() })
-                        Spacer(Modifier.size(16.dp))
-                        RewindButton(seconds = 30, onClick = { viewModel.seekBack30() })
-                        Spacer(Modifier.size(16.dp))
-                        RewindButton(seconds = 60, onClick = { viewModel.seekBack60() })
-
-                        if (uiState.rewindSeconds > 0) {
-                            Spacer(Modifier.size(16.dp))
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.clip(RoundedCornerShape(20.dp))
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .clickable { viewModel.seekToLive() }
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.Update,
-                                        contentDescription = "Volver en vivo",
-                                        modifier = Modifier.size(16.dp),
-                                        tint = Color.White
-                                    )
-                                    Text(
-                                        "En vivo",
-                                        color = Color.White,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(start = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
+                // Volume slider
+                var volume by rememberSaveable { mutableFloatStateOf(playerManager.player.volume) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.VolumeUp,
+                        contentDescription = "Volumen",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Slider(
+                        value = volume,
+                        onValueChange = { vol ->
+                            volume = vol
+                            playerManager.setVolume(vol)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                        )
+                    )
                 }
 
-                // Main controls row
+                Spacer(Modifier.weight(1f))
+
+                // Main controls
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -232,7 +196,6 @@ fun FullPlayerScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Favorite
                     IconButton(onClick = { viewModel.toggleFavorite() }) {
                         Icon(
                             imageVector = if (uiState.isFavorite) Icons.Default.Favorite
@@ -244,7 +207,6 @@ fun FullPlayerScreen(
                         )
                     }
 
-                    // Play / Pause
                     Box(
                         modifier = Modifier.size(72.dp),
                         contentAlignment = Alignment.Center
@@ -277,8 +239,13 @@ fun FullPlayerScreen(
                         }
                     }
 
-                    // Share
-                    IconButton(onClick = { /* TODO: Share */ }) {
+                    IconButton(onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, "Escuchando ${radio.name} en Trucho Radios Chile! \uD83C\uDDE8\uD83C\uDDF1 \uD83D\uDCFB")
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Compartir"))
+                    }) {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = "Compartir",
@@ -297,40 +264,6 @@ fun FullPlayerScreen(
             ) {
                 CircularProgressIndicator()
             }
-        }
-    }
-}
-
-@Composable
-private fun RewindButton(seconds: Int, onClick: () -> Unit) {
-    Surface(
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .clickable { onClick() }
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Icon(
-                Icons.Default.Replay10,
-                contentDescription = "Retroceder ${seconds}s",
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            // Show the seconds as a small badge
-            Text(
-                text = "$seconds",
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 6.dp)
-            )
         }
     }
 }

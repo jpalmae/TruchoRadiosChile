@@ -1,19 +1,13 @@
 package cl.truchoradios.chile.presentation.screens.player
 
-import android.content.ComponentName
-import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.session.MediaController
-import androidx.media3.session.SessionToken
+import cl.truchoradios.chile.data.local.entity.toDomain
 import cl.truchoradios.chile.data.repository.RadioRepositoryImpl
 import cl.truchoradios.chile.domain.model.Radio
-import cl.truchoradios.chile.domain.model.StreamType
 import cl.truchoradios.chile.player.RadioPlayerManager
-import cl.truchoradios.chile.service.RadioPlayerService
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -25,8 +19,6 @@ data class PlayerUiState(
     val isBuffering: Boolean = false,
     val error: String? = null,
     val isFavorite: Boolean = false,
-    val canSeekBack: Boolean = false,
-    val rewindSeconds: Int = 0,
 )
 
 @HiltViewModel
@@ -34,7 +26,6 @@ class FullPlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: RadioRepositoryImpl,
     private val playerManager: RadioPlayerManager,
-    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val radioId: String = savedStateHandle["radioId"] ?: ""
@@ -48,21 +39,13 @@ class FullPlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val entity = repository.getRadioById(radioId)
             if (entity != null) {
-                val radio = Radio(
-                    id = entity.id, name = entity.name,
-                    streamUrl = entity.streamUrl,
-                    streamType = StreamType.valueOf(entity.streamType),
-                    imageUrl = entity.imageUrl, frequency = entity.frequency,
-                    city = entity.city, region = entity.region,
-                    genres = entity.genres.split(",").filter { it.isNotBlank() },
-                    website = entity.website ?: "", listeners = entity.listeners,
-                )
+                val radio = entity.toDomain()
                 _uiState.value = _uiState.value.copy(radio = radio)
 
-                // Auto-play on first load
                 if (!hasAutoPlayed) {
                     hasAutoPlayed = true
-                    startPlayback(radio)
+                    playerManager.play(radio)
+                    repository.addRecent(radioId)
                 }
             }
         }
@@ -84,45 +67,22 @@ class FullPlayerViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(error = err)
             }
         }
-
-        viewModelScope.launch {
-            playerManager.canSeekBack.collect { can ->
-                _uiState.value = _uiState.value.copy(canSeekBack = can)
-            }
-        }
-
-        viewModelScope.launch {
-            playerManager.rewindSeconds.collect { seconds ->
-                _uiState.value = _uiState.value.copy(rewindSeconds = seconds)
-            }
-        }
-    }
-
-    private fun startPlayback(radio: Radio) {
-        val sessionToken = SessionToken(
-            appContext,
-            ComponentName(appContext, RadioPlayerService::class.java)
-        )
-        val controllerFuture = MediaController.Builder(appContext, sessionToken).buildAsync()
-        controllerFuture.addListener({
-            try { controllerFuture.get() } catch (_: Exception) { }
-        }, { it.run() })
-
-        playerManager.play(radio)
     }
 
     fun play() {
-        _uiState.value.radio?.let { startPlayback(it) }
+        _uiState.value.radio?.let { radio ->
+            val current = playerManager.getCurrentRadio()
+            if (current?.id == radio.id && playerManager.playbackState.value.name == "PAUSED") {
+                playerManager.resume()
+            } else {
+                playerManager.play(radio)
+            }
+        }
     }
 
     fun stop() {
-        playerManager.stop()
+        playerManager.pause()
     }
-
-    fun seekBack10() { playerManager.seekBackSeconds(10) }
-    fun seekBack30() { playerManager.seekBackSeconds(30) }
-    fun seekBack60() { playerManager.seekBackSeconds(60) }
-    fun seekToLive() { playerManager.seekToLive() }
 
     fun toggleFavorite() {
         val current = _uiState.value.isFavorite
@@ -130,9 +90,5 @@ class FullPlayerViewModel @Inject constructor(
         viewModelScope.launch {
             if (!current) repository.addFavorite(radioId) else repository.removeFavorite(radioId)
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
     }
 }

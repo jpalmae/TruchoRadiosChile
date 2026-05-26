@@ -2,6 +2,7 @@ package cl.truchoradios.chile.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import cl.truchoradios.chile.domain.model.Radio
 import cl.truchoradios.chile.domain.model.StreamType
 
 @Entity(tableName = "radios")
@@ -18,6 +19,21 @@ data class RadioEntity(
     val description: String? = "",
     val website: String? = "",
     val listeners: Int = 0,
+)
+
+fun RadioEntity.toDomain(): Radio = Radio(
+    id = id,
+    name = name,
+    streamUrl = streamUrl,
+    streamType = StreamType.valueOf(streamType),
+    imageUrl = imageUrl,
+    frequency = frequency,
+    city = city,
+    region = region,
+    genres = genres.split(",").filter { it.isNotBlank() },
+    description = description ?: "",
+    website = website ?: "",
+    listeners = listeners,
 )
 
 @Entity(tableName = "favorites")

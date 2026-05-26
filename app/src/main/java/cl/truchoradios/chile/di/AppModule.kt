@@ -2,6 +2,7 @@ package cl.truchoradios.chile.di
 
 import android.content.Context
 import cl.truchoradios.chile.data.local.RadioDatabase
+import cl.truchoradios.chile.data.local.SettingsManager
 import cl.truchoradios.chile.data.local.dao.FavoriteDao
 import cl.truchoradios.chile.data.local.dao.RadioDao
 import cl.truchoradios.chile.data.local.dao.RecentDao
@@ -44,4 +45,8 @@ object AppModule {
     @Provides
     @Singleton
     fun providePlayerManager(@ApplicationContext context: Context) = RadioPlayerManager(context)
+
+    @Provides
+    @Singleton
+    fun provideSettingsManager() = SettingsManager()
 }

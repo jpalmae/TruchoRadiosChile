@@ -1,5 +1,8 @@
 package cl.truchoradios.chile.domain.model
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class Radio(
     val id: String,
     val name: String,
@@ -18,12 +21,14 @@ data class Radio(
 
 enum class StreamType { MP3, AAC, HLS, OGG }
 
+@Stable
 data class Region(
     val id: String,
     val name: String,
     val radioCount: Int = 0,
 )
 
+@Stable
 data class Genre(
     val id: String,
     val name: String,

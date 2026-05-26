@@ -12,23 +12,27 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import cl.truchoradios.chile.domain.model.Radio
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 enum class PlaybackState {
-    IDLE, BUFFERING, PLAYING, ERROR
+    IDLE, BUFFERING, PLAYING, PAUSED, ERROR
 }
 
 @Singleton
 class RadioPlayerManager @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
-    private val userAgent = "TruchoRadiosChile/1.0 (Android; Radio Player)"
-
     private val dataSourceFactory = DefaultHttpDataSource.Factory()
-        .setUserAgent(userAgent)
+        .setUserAgent("TruchoRadiosChile/1.0 (Android; Radio Player)")
         .setConnectTimeoutMs(15000)
         .setReadTimeoutMs(15000)
         .setAllowCrossProtocolRedirects(true)
@@ -56,35 +60,40 @@ class RadioPlayerManager @Inject constructor(
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     val playbackState: StateFlow<PlaybackState> = _playbackState
 
-    private val _canSeekBack = MutableStateFlow(false)
-    val canSeekBack: StateFlow<Boolean> = _canSeekBack
+    private val _audioSessionId = MutableStateFlow(0)
+    val audioSessionId: StateFlow<Int> = _audioSessionId
 
-    private val _rewindSeconds = MutableStateFlow(0)
-    val rewindSeconds: StateFlow<Int> = _rewindSeconds
+    // Sleep timer
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var sleepTimerJob: Job? = null
+
+    private val _sleepTimerRemaining = MutableStateFlow(0L)
+    val sleepTimerRemaining: StateFlow<Long> = _sleepTimerRemaining
+
+    private val _volume = MutableStateFlow(1f)
+    val volume: StateFlow<Float> = _volume
 
     init {
         player.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                _isPlaying.value = isPlaying
-                if (isPlaying) {
-                    _playbackState.value = PlaybackState.PLAYING
-                    _canSeekBack.value = player.isCurrentMediaItemSeekable
-                }
+            override fun onIsPlayingChanged(playing: Boolean) {
+                _isPlaying.value = playing
+                if (playing) _playbackState.value = PlaybackState.PLAYING
             }
 
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                _isBuffering.value = playbackState == Player.STATE_BUFFERING
-                when (playbackState) {
+            override fun onPlaybackStateChanged(state: Int) {
+                _isBuffering.value = state == Player.STATE_BUFFERING
+                when (state) {
                     Player.STATE_BUFFERING -> _playbackState.value = PlaybackState.BUFFERING
                     Player.STATE_READY -> {
                         _error.value = null
-                        if (_isPlaying.value) {
-                            _playbackState.value = PlaybackState.PLAYING
-                        }
-                        _canSeekBack.value = player.isCurrentMediaItemSeekable
+                        if (_isPlaying.value) _playbackState.value = PlaybackState.PLAYING
                     }
                     Player.STATE_ENDED -> _playbackState.value = PlaybackState.IDLE
                 }
+            }
+
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                _audioSessionId.value = audioSessionId
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -101,29 +110,21 @@ class RadioPlayerManager @Inject constructor(
         _isBuffering.value = true
         _currentRadio.value = radio
         _playbackState.value = PlaybackState.BUFFERING
-        _rewindSeconds.value = 0
-        _canSeekBack.value = false
 
         player.stop()
         player.clearMediaItems()
 
-        val metadataBuilder = MediaMetadata.Builder()
+        val metadata = MediaMetadata.Builder()
             .setTitle(radio.name)
             .setArtist(radio.genres.joinToString(", ").ifBlank { "Radio Chilena" })
 
         if (radio.imageUrl.isNotBlank() && radio.imageUrl.startsWith("http")) {
-            metadataBuilder.setArtworkUri(radio.imageUrl.toUri())
+            metadata.setArtworkUri(radio.imageUrl.toUri())
         }
 
         val mediaItem = MediaItem.Builder()
             .setUri(radio.streamUrl.toUri())
-            .setMediaMetadata(metadataBuilder.build())
-            .setLiveConfiguration(
-                MediaItem.LiveConfiguration.Builder()
-                    .setMaxOffsetMs(60_000L)
-                    .setTargetOffsetMs(30_000L)
-                    .build()
-            )
+            .setMediaMetadata(metadata.build())
             .build()
 
         player.setMediaItem(mediaItem)
@@ -131,20 +132,15 @@ class RadioPlayerManager @Inject constructor(
         player.playWhenReady = true
     }
 
-    fun seekBackSeconds(seconds: Int) {
-        if (!player.isCurrentMediaItemSeekable) return
-        val currentPosition = player.currentPosition
-        val newPosition = currentPosition - (seconds * 1000L)
-        val minPosition = player.duration.coerceAtMost(0L)
-        player.seekTo(newPosition.coerceAtLeast(minPosition))
-        _rewindSeconds.value = _rewindSeconds.value + seconds
+    fun pause() {
+        player.playWhenReady = false
+        _isPlaying.value = false
+        _playbackState.value = PlaybackState.PAUSED
     }
 
-    fun seekToLive() {
-        if (player.isCurrentMediaItemSeekable) {
-            player.seekToDefaultPosition()
-            _rewindSeconds.value = 0
-        }
+    fun resume() {
+        player.playWhenReady = true
+        _playbackState.value = PlaybackState.PLAYING
     }
 
     fun stop() {
@@ -154,8 +150,29 @@ class RadioPlayerManager @Inject constructor(
         _isBuffering.value = false
         _currentRadio.value = null
         _playbackState.value = PlaybackState.IDLE
-        _rewindSeconds.value = 0
-        _canSeekBack.value = false
+        cancelSleepTimer()
+    }
+
+    fun setVolume(vol: Float) {
+        player.volume = vol.coerceIn(0f, 1f)
+    }
+
+    fun scheduleSleepTimer(minutes: Int) {
+        cancelSleepTimer()
+        _sleepTimerRemaining.value = minutes * 60_000L
+        sleepTimerJob = scope.launch {
+            while (_sleepTimerRemaining.value > 0) {
+                delay(1000)
+                _sleepTimerRemaining.value -= 1000
+            }
+            stop()
+        }
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _sleepTimerRemaining.value = 0
     }
 
     fun getCurrentRadio(): Radio? = _currentRadio.value

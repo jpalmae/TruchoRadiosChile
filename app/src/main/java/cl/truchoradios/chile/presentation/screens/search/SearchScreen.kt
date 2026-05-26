@@ -18,10 +18,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cl.truchoradios.chile.data.local.entity.RadioEntity
+import cl.truchoradios.chile.data.local.entity.toDomain
 import cl.truchoradios.chile.data.repository.RadioRepositoryImpl
 import cl.truchoradios.chile.domain.model.Radio
-import cl.truchoradios.chile.domain.model.StreamType
+import cl.truchoradios.chile.player.RadioPlayerManager
 import cl.truchoradios.chile.presentation.components.RadioImage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +34,7 @@ data class SearchUiState(val query: String = "", val results: List<Radio> = empt
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repository: RadioRepositoryImpl,
+    val playerManager: RadioPlayerManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState
@@ -52,14 +53,6 @@ class SearchViewModel @Inject constructor(
             }
         }
     }
-
-    private fun RadioEntity.toDomain() = Radio(
-        id = id, name = name, streamUrl = streamUrl,
-        streamType = StreamType.valueOf(streamType),
-        imageUrl = imageUrl, frequency = frequency, city = city,
-        region = region, genres = genres.split(",").filter { it.isNotBlank() },
-        listeners = listeners,
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,6 +63,7 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val currentRadio by viewModel.playerManager.currentRadio.collectAsState()
 
     Scaffold(
         topBar = {
@@ -91,11 +85,10 @@ fun SearchScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            // Search field
             OutlinedTextField(
                 value = uiState.query,
                 onValueChange = { viewModel.onQueryChange(it) },
-                placeholder = { Text("Buscar radios…") },
+                placeholder = { Text("Buscar radios\u2026") },
                 singleLine = true,
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null)
@@ -106,7 +99,6 @@ fun SearchScreen(
                 shape = RoundedCornerShape(16.dp),
             )
 
-            // Content
             if (uiState.results.isEmpty() && uiState.query.length >= 2) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -124,9 +116,10 @@ fun SearchScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(uiState.results) { radio ->
+                    items(uiState.results, key = { it.id }) { radio ->
                         RadioListItem(
                             radio = radio,
+                            isPlaying = currentRadio?.id == radio.id,
                             onClick = { onRadioClick(radio.id) },
                         )
                     }
@@ -137,15 +130,20 @@ fun SearchScreen(
 }
 
 @Composable
-private fun RadioListItem(radio: Radio, onClick: () -> Unit) {
+private fun RadioListItem(
+    radio: Radio,
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+) {
+    val borderColor = if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLow
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 1.dp,
+        color = borderColor,
+        tonalElevation = if (isPlaying) 4.dp else 1.dp,
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -159,13 +157,19 @@ private fun RadioListItem(radio: Radio, onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = radio.name,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = radio.name,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    if (isPlaying) {
+                        Spacer(Modifier.width(6.dp))
+                        Text("\u25CF", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
                 Text(
                     text = listOf(radio.genres.firstOrNull(), radio.frequency)
                         .filter { !it.isNullOrBlank() }

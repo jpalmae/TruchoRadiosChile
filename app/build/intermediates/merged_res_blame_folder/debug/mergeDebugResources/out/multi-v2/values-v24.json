@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "cl.truchoradios.chile.app-mergeDebugResources-69:/values-v24/values-v24.xml",
+            "map": [
+                {
+                    "source": "/Users/jpalmae/.gradle/caches/8.13/transforms/45a28572864e6fab379fba67eead7c2d/transformed/media3-session-1.5.1/res/values-v24/values-v24.xml",
+                    "from": {
+                        "startLines": "2,3,4,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,121,182,248",
+                        "endColumns": "65,60,65,66",
+                        "endOffsets": "116,177,243,310"
+                    }
+                }
+            ]
+        }
+    ]
+}

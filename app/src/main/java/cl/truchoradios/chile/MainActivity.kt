@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import cl.truchoradios.chile.data.local.SettingsManager
 import cl.truchoradios.chile.navigation.TruchoNavHost
 import cl.truchoradios.chile.player.RadioPlayerManager
 import cl.truchoradios.chile.ui.theme.TruchoRadiosTheme
@@ -19,19 +20,18 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var playerManager: RadioPlayerManager
+    @Inject lateinit var settingsManager: SettingsManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Install the splash screen before super.onCreate
         val splashScreen = installSplashScreen()
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Keep splash visible until Compose renders first frame
         splashScreen.setKeepOnScreenCondition { false }
 
         setContent {
-            TruchoRadiosTheme {
+            TruchoRadiosTheme(settingsManager = settingsManager) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -44,7 +44,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Stop playback and release player when app is closed
         if (isFinishing) {
             playerManager.stop()
             playerManager.player.release()

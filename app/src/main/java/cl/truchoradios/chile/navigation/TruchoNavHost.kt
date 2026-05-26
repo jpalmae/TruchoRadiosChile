@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import cl.truchoradios.chile.data.local.SettingsManager
 import cl.truchoradios.chile.presentation.components.MiniPlayer
 import cl.truchoradios.chile.presentation.components.TruchoBottomBar
 import cl.truchoradios.chile.presentation.screens.favorites.FavoritesScreen
@@ -47,10 +48,10 @@ object Routes {
     fun radioList(filterType: String, filterValue: String) = "radios/$filterType/$filterValue"
 }
 
-// ViewModel to share playerManager in the navigation graph
 @HiltViewModel
 class PlayerSharedViewModel @Inject constructor(
     val playerManager: RadioPlayerManager,
+    val settingsManager: SettingsManager,
 ) : ViewModel()
 
 @Composable
@@ -59,17 +60,16 @@ fun TruchoNavHost(
 ) {
     val sharedViewModel: PlayerSharedViewModel = hiltViewModel()
     val playerManager = sharedViewModel.playerManager
+    val settingsManager = sharedViewModel.settingsManager
     val currentRadio by playerManager.currentRadio.collectAsState()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Screens that show bottom bar + mini player
     val showBottomBar = currentRoute in listOf(Routes.HOME, Routes.SEARCH, Routes.FAVORITES)
     val showMiniPlayer = currentRadio != null && currentRoute != Routes.PLAYER
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Main content
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
@@ -114,7 +114,9 @@ fun TruchoNavHost(
 
             composable(Routes.SETTINGS) {
                 SettingsScreen(
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    settingsManager = settingsManager,
+                    playerManager = playerManager,
                 )
             }
 
@@ -123,7 +125,8 @@ fun TruchoNavHost(
                 arguments = listOf(navArgument("radioId") { type = NavType.StringType })
             ) {
                 FullPlayerScreen(
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    playerManager = playerManager
                 )
             }
 
@@ -143,13 +146,11 @@ fun TruchoNavHost(
             }
         }
 
-        // Bottom bar + mini player overlay
         if (showBottomBar) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
             ) {
-                // Mini player
                 AnimatedVisibility(
                     visible = showMiniPlayer,
                     enter = slideInVertically(initialOffsetY = { it }),
@@ -165,7 +166,6 @@ fun TruchoNavHost(
                     )
                 }
 
-                // Bottom navigation
                 TruchoBottomBar(
                     currentRoute = currentRoute ?: Routes.HOME,
                     onNavigate = { route ->

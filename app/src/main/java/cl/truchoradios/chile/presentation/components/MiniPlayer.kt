@@ -49,7 +49,6 @@ fun MiniPlayer(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column {
-                    // Loading/buffering indicator
                     if (playbackState == PlaybackState.BUFFERING) {
                         LinearProgressIndicator(
                             modifier = Modifier
@@ -67,7 +66,6 @@ fun MiniPlayer(
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Radio image
                         RadioImage(
                             imageUrl = radio.imageUrl,
                             name = radio.name,
@@ -77,7 +75,6 @@ fun MiniPlayer(
 
                         Spacer(Modifier.width(12.dp))
 
-                        // Radio info
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 radio.name,
@@ -92,6 +89,7 @@ fun MiniPlayer(
                                 when (playbackState) {
                                     PlaybackState.BUFFERING -> "Buffering..."
                                     PlaybackState.PLAYING -> "En vivo"
+                                    PlaybackState.PAUSED -> "Pausado"
                                     PlaybackState.ERROR -> "Error"
                                     else -> ""
                                 },
@@ -100,6 +98,7 @@ fun MiniPlayer(
                                 color = when (playbackState) {
                                     PlaybackState.BUFFERING -> MaterialTheme.colorScheme.tertiary
                                     PlaybackState.PLAYING -> Color(0xFF4CAF50)
+                                    PlaybackState.PAUSED -> MaterialTheme.colorScheme.onSurfaceVariant
                                     PlaybackState.ERROR -> MaterialTheme.colorScheme.error
                                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                                 }
@@ -108,7 +107,6 @@ fun MiniPlayer(
 
                         Spacer(Modifier.width(8.dp))
 
-                        // Play/Pause button
                         if (playbackState == PlaybackState.BUFFERING) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(40.dp),
@@ -118,8 +116,10 @@ fun MiniPlayer(
                         } else {
                             FilledIconButton(
                                 onClick = {
-                                    if (isPlaying) {
-                                        playerManager.stop()
+                                    if (playbackState == PlaybackState.PAUSED) {
+                                        playerManager.resume()
+                                    } else if (isPlaying) {
+                                        playerManager.pause()
                                     } else {
                                         playerManager.play(radio)
                                     }
@@ -131,7 +131,8 @@ fun MiniPlayer(
                                 )
                             ) {
                                 Icon(
-                                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                    if (isPlaying || playbackState == PlaybackState.PLAYING) Icons.Filled.Pause
+                                    else Icons.Filled.PlayArrow,
                                     contentDescription = if (isPlaying) "Pausar" else "Reproducir",
                                     modifier = Modifier.size(24.dp)
                                 )
