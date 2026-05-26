@@ -8,3 +8,21 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Android build outputs
+app/build/
+*.apk
+*.aab
+
+# Compiled class files
+*.class
+
+# Keystore (NUNCA subir al repo)
+*.jks
+*.keystore
+
+# Play Store assets (grandes, no necesarios en repo)
+play_store_assets/
+
+# OS files
+Thumbs.db
