@@ -22,4 +22,22 @@
     <string name="notification_channel_desc">Controles de reproducción de radio</string>
     <string name="sleep_timer">Temporizador</string>
     <string name="share">Compartir</string>
+    
+    <!-- Strings agregados para mejoras -->
+    <string name="dark_mode">Modo Oscuro</string>
+    <string name="light_mode">Modo Claro</string>
+    <string name="volume">Volumen</string>
+    <string name="buffering">Cargando…</string>
+    <string name="live">En Vivo</string>
+    <string name="offline">Sin conexión</string>
+    <string name="retry">Reintentar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="close">Cerrar</string>
+    <string name="about">Acerca de</string>
+    <string name="version">Versión</string>
+    <string name="no_favorites">No tienes radios favoritas</string>
+    <string name="no_recent">No has escuchado radios recientemente</string>
+    <string name="select_minutes">Seleccionar minutos</string>
+    <string name="sleep_timer_active">Temporizador activo</string>
+    <string name="sleep_timer_cancelled">Temporizador cancelado</string>
 </resources>
