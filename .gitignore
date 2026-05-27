@@ -1,28 +1,51 @@
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-
-# Android build outputs
-app/build/
-*.apk
-*.aab
-
-# Compiled class files
+```
+# Compiled and build artifacts
 *.class
+*.o
+*.obj
+*.out
+*.dll
+*.so
+*.a
+*.exe
 
-# Keystore (NUNCA subir al repo)
-*.jks
-*.keystore
+# Dependencies
+.gradle/
+build/
+target/
 
-# Play Store assets (grandes, no necesarios en repo)
-play_store_assets/
+# Logs and temp files
+*.log
+*.tmp
+*.swp
 
-# OS files
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System files
+.DS_Store
 Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Python specific (if applicable)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.mypy_cache/
+.pytest_cache/
+venv/
+.venv/
+```

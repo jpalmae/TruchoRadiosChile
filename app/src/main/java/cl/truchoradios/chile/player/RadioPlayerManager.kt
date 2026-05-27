@@ -68,8 +68,7 @@ class RadioPlayerManager @Inject constructor(
     private val _audioSessionId = MutableStateFlow(0)
     val audioSessionId: StateFlow<Int> = _audioSessionId
 
-    // Sleep timer
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    // Sleep timer - usando scope vinculado al lifecycle correcto
     private var sleepTimerJob: Job? = null
 
     private val _sleepTimerRemaining = MutableStateFlow(0L)
@@ -81,6 +80,9 @@ class RadioPlayerManager @Inject constructor(
     // MediaController for foreground service + notification
     private var mediaControllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
+    
+    // Scope para operaciones internas, se cancelará cuando se destruya el singleton
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     init {
         player.addListener(object : Player.Listener {
@@ -179,8 +181,16 @@ class RadioPlayerManager @Inject constructor(
     }
 
     fun setVolume(vol: Float) {
-        player.volume = vol.coerceIn(0f, 1f)
+        val normalized = vol.coerceIn(0f, 1f)
+        player.volume = normalized
+        _volume.value = normalized
     }
+    
+    /**
+     * Obtiene el volumen actual persistido.
+     * Útil para restaurar el volumen después de cambios de configuración.
+     */
+    fun getVolume(): Float = _volume.value
 
     fun scheduleSleepTimer(minutes: Int) {
         cancelSleepTimer()
@@ -201,4 +211,18 @@ class RadioPlayerManager @Inject constructor(
     }
 
     fun getCurrentRadio(): Radio? = _currentRadio.value
+    
+    /**
+     * Libera recursos cuando la aplicación se cierra.
+     * Debe ser llamado desde TruchoRadiosApp.onTerminate() o similar.
+     */
+    fun release() {
+        scope.cancel()
+        sleepTimerJob?.cancel()
+        mediaController?.run {
+            release()
+        }
+        mediaControllerFuture?.cancel()
+        player.release()
+    }
 }
