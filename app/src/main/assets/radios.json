@@ -3797,7 +3797,7 @@
     {
       "id": "la_poderosa_rancagua",
       "name": "Radio La Poderosa Rancagua",
-      "streamUrl": "https://streaming.viphosting.cl:8020/poderosarancagua",
+      "streamUrl": "https://streaming.viphosting.cl:8116/poderosarancagua",
       "streamType": "MP3",
       "imageUrl": "file:///android_asset/radio_logos/la_poderosa_rancagua.png",
       "frequency": "96.7 FM",
