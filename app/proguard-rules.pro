@@ -14,3 +14,6 @@
 # Room
 -keep class * extends androidx.room.RoomDatabase
 -keep @androidx.room.Entity class *
+
+# Google Cast (referenciado por nombre desde el Manifest)
+-keep class cl.truchoradios.chile.cast.TruchoCastOptionsProvider { *; }

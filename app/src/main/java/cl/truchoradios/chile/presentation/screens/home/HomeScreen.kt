@@ -48,6 +48,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import cl.truchoradios.chile.domain.model.Genre
 import cl.truchoradios.chile.domain.model.Radio
 import cl.truchoradios.chile.domain.model.Region
+import cl.truchoradios.chile.presentation.components.CastButton
 import cl.truchoradios.chile.presentation.components.RadioImage
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -58,6 +59,7 @@ fun HomeScreen(
     onSearchClick: () -> Unit,
     onFavoritesClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    showCastButton: Boolean = false,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -75,6 +77,9 @@ fun HomeScreen(
                     )
                 },
                 actions = {
+                    if (showCastButton) {
+                        CastButton(modifier = Modifier.width(48.dp).height(48.dp))
+                    }
                     IconButton(onClick = onSearchClick) {
                         Icon(
                             Icons.Default.Search,

@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.truchoradios.chile.player.RadioPlayerManager
+import cl.truchoradios.chile.presentation.components.CastButton
 import cl.truchoradios.chile.presentation.components.RadioImage
 import cl.truchoradios.chile.presentation.components.SpectrumVisualizer
 
@@ -56,6 +57,7 @@ fun FullPlayerScreen(
     viewModel: FullPlayerViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isCasting by playerManager.isCasting.collectAsState()
     val radio = uiState.radio
     val context = LocalContext.current
 
@@ -69,6 +71,11 @@ fun FullPlayerScreen(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver"
                         )
+                    }
+                },
+                actions = {
+                    if (playerManager.isCastAvailable) {
+                        CastButton(modifier = Modifier.size(48.dp))
                     }
                 }
             )
@@ -135,6 +142,7 @@ fun FullPlayerScreen(
                 Text(
                     text = when {
                         uiState.isBuffering -> "Conectando..."
+                        isCasting && uiState.isPlaying -> "Transmitiendo por Cast"
                         uiState.isPlaying -> "En vivo"
                         uiState.error != null -> "Error de conexión"
                         else -> "Pausado"

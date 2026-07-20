@@ -91,6 +91,7 @@ fun TruchoNavHost(
                     onSearchClick = { navController.navigate(Routes.SEARCH) },
                     onFavoritesClick = { navController.navigate(Routes.FAVORITES) },
                     onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+                    showCastButton = playerManager.isCastAvailable,
                 )
             }
 

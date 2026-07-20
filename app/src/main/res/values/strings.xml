@@ -22,4 +22,8 @@
     <string name="notification_channel_desc">Controles de reproducción de radio</string>
     <string name="sleep_timer">Temporizador</string>
     <string name="share">Compartir</string>
+    <string name="cast">Transmitir</string>
+    <string name="casting_to">Transmitiendo a %1$s</string>
+    <!-- Default Media Receiver. Registra un Styled Receiver en https://cast.google.com/publish y reemplaza este ID para producción -->
+    <string name="cast_receiver_app_id">CC1AD845</string>
 </resources>

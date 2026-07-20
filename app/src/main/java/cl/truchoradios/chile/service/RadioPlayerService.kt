@@ -26,7 +26,7 @@ class RadioPlayerService : MediaSessionService() {
 
         val bitmapLoader = HttpBitmapLoader(this)
 
-        mediaSession = MediaSession.Builder(this, playerManager.player)
+        mediaSession = MediaSession.Builder(this, playerManager.sessionPlayer)
             .setBitmapLoader(bitmapLoader)
             .setCallback(object : MediaSession.Callback {
                 override fun onConnect(

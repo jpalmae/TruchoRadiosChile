@@ -34,6 +34,7 @@ fun MiniPlayer(
     val currentRadio by playerManager.currentRadio.collectAsState()
     val playbackState by playerManager.playbackState.collectAsState()
     val isPlaying by playerManager.isPlaying.collectAsState()
+    val isCasting by playerManager.isCasting.collectAsState()
 
     AnimatedVisibility(
         visible = currentRadio != null,
@@ -86,11 +87,12 @@ fun MiniPlayer(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                when (playbackState) {
-                                    PlaybackState.BUFFERING -> "Buffering..."
-                                    PlaybackState.PLAYING -> "En vivo"
-                                    PlaybackState.PAUSED -> "Pausado"
-                                    PlaybackState.ERROR -> "Error"
+                                when {
+                                    playbackState == PlaybackState.BUFFERING -> "Buffering..."
+                                    isCasting && playbackState == PlaybackState.PLAYING -> "Cast"
+                                    playbackState == PlaybackState.PLAYING -> "En vivo"
+                                    playbackState == PlaybackState.PAUSED -> "Pausado"
+                                    playbackState == PlaybackState.ERROR -> "Error"
                                     else -> ""
                                 },
                                 style = MaterialTheme.typography.bodySmall,

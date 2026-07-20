@@ -3,18 +3,24 @@ package cl.truchoradios.chile.player
 import android.content.Context
 import android.content.Intent
 import androidx.core.net.toUri
+import androidx.media3.cast.CastPlayer
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import cl.truchoradios.chile.cast.CastPlayerSwitcher
 import cl.truchoradios.chile.domain.model.Radio
+import cl.truchoradios.chile.domain.model.StreamType
 import cl.truchoradios.chile.service.RadioPlayerService
+import com.google.android.gms.cast.framework.CastContext
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +38,7 @@ enum class PlaybackState {
     IDLE, BUFFERING, PLAYING, PAUSED, ERROR
 }
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @Singleton
 class RadioPlayerManager @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -50,6 +57,24 @@ class RadioPlayerManager @Inject constructor(
         )
         .build()
 
+    val castContext: CastContext? = runCatching {
+        CastContext.getSharedInstance(context)
+    }.getOrNull()
+
+    private val castPlayer: CastPlayer? = castContext?.let { ctx ->
+        runCatching { CastPlayer(ctx) }.getOrNull()
+    }
+
+    @UnstableApi
+    private val castSwitcher: CastPlayerSwitcher? = castPlayer?.let {
+        CastPlayerSwitcher(player, it)
+    }
+
+    val isCastAvailable: Boolean get() = castSwitcher != null
+
+    @UnstableApi
+    val sessionPlayer: Player = castSwitcher ?: player
+
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying
 
@@ -64,6 +89,9 @@ class RadioPlayerManager @Inject constructor(
 
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     val playbackState: StateFlow<PlaybackState> = _playbackState
+
+    private val _isCasting = MutableStateFlow(false)
+    val isCasting: StateFlow<Boolean> = _isCasting
 
     private val _audioSessionId = MutableStateFlow(0)
     val audioSessionId: StateFlow<Int> = _audioSessionId
@@ -83,7 +111,11 @@ class RadioPlayerManager @Inject constructor(
     private var mediaController: MediaController? = null
 
     init {
-        player.addListener(object : Player.Listener {
+        sessionPlayer.addListener(object : Player.Listener {
+            override fun onEvents(player: Player, events: Player.Events) {
+                _isCasting.value = castSwitcher?.isCasting == true
+            }
+
             override fun onIsPlayingChanged(playing: Boolean) {
                 _isPlaying.value = playing
                 if (playing) _playbackState.value = PlaybackState.PLAYING
@@ -101,15 +133,17 @@ class RadioPlayerManager @Inject constructor(
                 }
             }
 
-            override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                _audioSessionId.value = audioSessionId
-            }
-
             override fun onPlayerError(error: PlaybackException) {
                 _error.value = "Error al reproducir: ${error.message}"
                 _isPlaying.value = false
                 _isBuffering.value = false
                 _playbackState.value = PlaybackState.ERROR
+            }
+        })
+
+        player.addListener(object : Player.Listener {
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                _audioSessionId.value = audioSessionId
             }
         })
 
@@ -136,8 +170,8 @@ class RadioPlayerManager @Inject constructor(
         _currentRadio.value = radio
         _playbackState.value = PlaybackState.BUFFERING
 
-        player.stop()
-        player.clearMediaItems()
+        sessionPlayer.stop()
+        sessionPlayer.clearMediaItems()
 
         val metadata = MediaMetadata.Builder()
             .setTitle(radio.name)
@@ -149,28 +183,36 @@ class RadioPlayerManager @Inject constructor(
 
         val mediaItem = MediaItem.Builder()
             .setUri(radio.streamUrl.toUri())
+            .setMimeType(
+                when (radio.streamType) {
+                    StreamType.MP3 -> MimeTypes.AUDIO_MPEG
+                    StreamType.AAC -> MimeTypes.AUDIO_AAC
+                    StreamType.HLS -> MimeTypes.APPLICATION_M3U8
+                    StreamType.OGG -> MimeTypes.AUDIO_OGG
+                }
+            )
             .setMediaMetadata(metadata.build())
             .build()
 
-        player.setMediaItem(mediaItem)
-        player.prepare()
-        player.playWhenReady = true
+        sessionPlayer.setMediaItem(mediaItem)
+        sessionPlayer.prepare()
+        sessionPlayer.playWhenReady = true
     }
 
     fun pause() {
-        player.playWhenReady = false
+        sessionPlayer.playWhenReady = false
         _isPlaying.value = false
         _playbackState.value = PlaybackState.PAUSED
     }
 
     fun resume() {
-        player.playWhenReady = true
+        sessionPlayer.playWhenReady = true
         _playbackState.value = PlaybackState.PLAYING
     }
 
     fun stop() {
-        player.stop()
-        player.clearMediaItems()
+        sessionPlayer.stop()
+        sessionPlayer.clearMediaItems()
         _isPlaying.value = false
         _isBuffering.value = false
         _currentRadio.value = null
@@ -179,7 +221,7 @@ class RadioPlayerManager @Inject constructor(
     }
 
     fun setVolume(vol: Float) {
-        player.volume = vol.coerceIn(0f, 1f)
+        sessionPlayer.volume = vol.coerceIn(0f, 1f)
     }
 
     fun scheduleSleepTimer(minutes: Int) {
@@ -201,4 +243,8 @@ class RadioPlayerManager @Inject constructor(
     }
 
     fun getCurrentRadio(): Radio? = _currentRadio.value
+
+    fun release() {
+        sessionPlayer.release()
+    }
 }
