@@ -87,7 +87,7 @@
     {
       "id": "84b43fb8-1be0-11e8-a334-52543be04c81",
       "name": "Corazon",
-      "streamUrl": "http://27413.live.streamtheworld.com/CORAZON_SC",
+      "streamUrl": "https://playerservices.streamtheworld.com/api/livestream-redirect/CORAZON_SC",
       "streamType": "MP3",
       "imageUrl": "file:///android_asset/radio_logos/84b43fb8_1be0_11e8_a334_52543be04c81.gif",
       "frequency": "",
@@ -591,7 +591,7 @@
     {
       "id": "964d9747-0601-11e8-ae97-52543be04c81",
       "name": "Radioactiva 92.5 FM",
-      "streamUrl": "http://24443.live.streamtheworld.com/ACTIVAAAC_SC",
+      "streamUrl": "https://playerservices.streamtheworld.com/api/livestream-redirect/ACTIVAAAC_SC",
       "streamType": "AAC",
       "imageUrl": "file:///android_asset/radio_logos/964d9747_0601_11e8_ae97_52543be04c81.gif",
       "frequency": "",
@@ -773,7 +773,7 @@
     {
       "id": "9632c4ae-0601-11e8-ae97-52543be04c81",
       "name": "Los 40 Principales Chile",
-      "streamUrl": "http://27443.live.streamtheworld.com:3690/LOS40_CHILE_SC",
+      "streamUrl": "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40_CHILE_SC",
       "streamType": "MP3",
       "imageUrl": "file:///android_asset/radio_logos/9632c4ae_0601_11e8_ae97_52543be04c81.svg",
       "frequency": "",
@@ -3797,7 +3797,7 @@
     {
       "id": "la_poderosa_rancagua",
       "name": "Radio La Poderosa Rancagua",
-      "streamUrl": "https://streaming.viphosting.cl:7057/poderosarancagua",
+      "streamUrl": "https://streaming.viphosting.cl:8020/poderosarancagua",
       "streamType": "MP3",
       "imageUrl": "file:///android_asset/radio_logos/la_poderosa_rancagua.png",
       "frequency": "96.7 FM",
@@ -3811,7 +3811,7 @@
     {
       "id": "la_poderosa_rengo",
       "name": "Radio La Poderosa Rengo",
-      "streamUrl": "https://streaming.viphosting.cl:7010/poderosarengo",
+      "streamUrl": "https://streaming.viphosting.cl:8022/poderosarengo",
       "streamType": "MP3",
       "imageUrl": "file:///android_asset/radio_logos/la_poderosa_rengo.png",
       "frequency": "106.7 FM",
@@ -3825,7 +3825,7 @@
     {
       "id": "la_poderosa_pichilemu",
       "name": "Radio La Poderosa Pichilemu",
-      "streamUrl": "https://streaming.viphosting.cl:7033/poderosapichilemu",
+      "streamUrl": "https://streaming.viphosting.cl:8068/poderosapichilemu",
       "streamType": "MP3",
       "imageUrl": "file:///android_asset/radio_logos/la_poderosa_pichilemu.png",
       "frequency": "103.7 FM",

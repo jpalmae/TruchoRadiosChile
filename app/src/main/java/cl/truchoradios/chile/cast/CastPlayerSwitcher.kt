@@ -89,6 +89,10 @@ class CastPlayerSwitcher(
             currentPlayer.playbackState
         }
 
+        val isLoading = currentPlayer.isLoading &&
+            playbackState != Player.STATE_IDLE &&
+            playbackState != Player.STATE_ENDED
+
         return State.Builder()
             .setAvailableCommands(AVAILABLE_COMMANDS)
             .setPlayWhenReady(
@@ -98,7 +102,7 @@ class CastPlayerSwitcher(
             .setPlaybackState(playbackState)
             .setPlaybackParameters(currentPlayer.playbackParameters)
             .setPlayerError(currentPlayer.playerError)
-            .setIsLoading(currentPlayer.isLoading)
+            .setIsLoading(isLoading)
             .setPlaylist(playlist)
             .setPlaylistMetadata(currentPlayer.playlistMetadata)
             .setContentPositionMs(currentPlayer.contentPosition.coerceAtLeast(0))
