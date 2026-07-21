@@ -17,6 +17,8 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import cl.truchoradios.chile.cast.CastPlayerSwitcher
+import cl.truchoradios.chile.data.local.entity.toDomain
+import cl.truchoradios.chile.data.repository.RadioRepositoryImpl
 import cl.truchoradios.chile.domain.model.Radio
 import cl.truchoradios.chile.domain.model.StreamType
 import cl.truchoradios.chile.service.RadioPlayerService
@@ -42,6 +44,7 @@ enum class PlaybackState {
 @Singleton
 class RadioPlayerManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val repository: RadioRepositoryImpl,
 ) {
     private val dataSourceFactory = DefaultHttpDataSource.Factory()
         .setUserAgent("TruchoRadiosChile/1.0 (Android; Radio Player)")
@@ -133,6 +136,20 @@ class RadioPlayerManager @Inject constructor(
                 }
             }
 
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                val mediaId = mediaItem?.mediaId.orEmpty()
+                if (mediaId.isNotEmpty() && _currentRadio.value?.id != mediaId) {
+                    scope.launch {
+                        repository.getRadioById(mediaId)?.let { entity ->
+                            _currentRadio.value = entity.toDomain()
+                            repository.addRecent(mediaId)
+                        }
+                    }
+                } else if (mediaId.isNotEmpty()) {
+                    scope.launch { repository.addRecent(mediaId) }
+                }
+            }
+
             override fun onPlayerError(error: PlaybackException) {
                 _error.value = "Error al reproducir: ${error.message}"
                 _isPlaying.value = false
@@ -182,6 +199,7 @@ class RadioPlayerManager @Inject constructor(
         }
 
         val mediaItem = MediaItem.Builder()
+            .setMediaId(radio.id)
             .setUri(radio.streamUrl.toUri())
             .setMimeType(
                 when (radio.streamType) {

@@ -44,7 +44,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providePlayerManager(@ApplicationContext context: Context) = RadioPlayerManager(context)
+    fun providePlayerManager(
+        @ApplicationContext context: Context,
+        repository: RadioRepositoryImpl,
+    ) = RadioPlayerManager(context, repository)
 
     @Provides
     @Singleton
