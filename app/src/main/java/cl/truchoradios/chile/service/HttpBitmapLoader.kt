@@ -7,40 +7,39 @@ import android.net.Uri
 import androidx.media3.common.util.BitmapLoader
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.Executors
 
 /**
  * Downloads artwork images over HTTP and caches them locally.
  * Media3's default BitmapLoader only supports local files and content:// URIs.
  * This loader intercepts HTTP/HTTPS URIs, downloads the image, and returns the bitmap.
+ * Las descargas se hacen en segundo plano: loadBitmap es invocado en el hilo
+ * principal de la sesion y bloquearlo congela toda la app (p.ej. Android Auto).
  */
 class HttpBitmapLoader(private val context: Context) : BitmapLoader {
 
     private val cacheDir = File(context.cacheDir, "artwork").also { it.mkdirs() }
+    private val executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool())
 
-    override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
-        return try {
-            if (uri.scheme == "http" || uri.scheme == "https") {
-                val bitmap = downloadAndCacheBitmap(uri.toString())
-                Futures.immediateFuture(bitmap)
-            } else {
-                // Local/content URIs
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    val bitmap = BitmapFactory.decodeStream(input)
-                    if (bitmap != null) {
-                        Futures.immediateFuture(bitmap)
-                    } else {
-                        Futures.immediateFailedFuture(RuntimeException("Cannot decode: $uri"))
-                    }
-                } ?: Futures.immediateFailedFuture(RuntimeException("Cannot open: $uri"))
+    override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> =
+        executor.submit<Bitmap> {
+            try {
+                if (uri.scheme == "http" || uri.scheme == "https") {
+                    downloadAndCacheBitmap(uri.toString())
+                } else {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        BitmapFactory.decodeStream(input)
+                    } ?: throw RuntimeException("Cannot open: $uri")
+                }
+            } catch (e: Exception) {
+                throw RuntimeException("Failed to load bitmap: $uri", e)
             }
-        } catch (e: Exception) {
-            Futures.immediateFailedFuture(e)
         }
-    }
 
     override fun decodeBitmap(data: ByteArray): ListenableFuture<Bitmap> {
         return try {
