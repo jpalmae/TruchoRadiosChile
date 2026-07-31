@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cl.truchoradios.chile.BuildConfig
 import cl.truchoradios.chile.data.local.SettingsManager
 import cl.truchoradios.chile.player.RadioPlayerManager
 
@@ -45,7 +46,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Trucho Radios Chile", style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(4.dp))
-                    Text("v1.0.0", style = MaterialTheme.typography.bodyMedium)
+                    Text("v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "Reproductor de radios chilenas \uD83C\uDDE8\uD83C\uDDF1\nTodas tus emisoras favoritas en un solo lugar.",
