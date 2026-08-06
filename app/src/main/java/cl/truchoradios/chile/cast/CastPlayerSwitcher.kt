@@ -10,6 +10,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @UnstableApi
 class CastPlayerSwitcher(
@@ -22,9 +23,14 @@ class CastPlayerSwitcher(
     val isCasting: Boolean
         get() = currentPlayer === castPlayer
 
+    val volumeFlow = MutableStateFlow(localPlayer.volume)
+
     private val forwardingListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
             if (player === currentPlayer) {
+                if (events.contains(Player.EVENT_VOLUME_CHANGED)) {
+                    volumeFlow.value = player.volume
+                }
                 invalidateState()
             }
         }
@@ -58,6 +64,7 @@ class CastPlayerSwitcher(
         oldPlayer.clearMediaItems()
 
         currentPlayer = newPlayer
+        volumeFlow.value = newPlayer.volume
 
         if (mediaItems.isNotEmpty()) {
             newPlayer.setMediaItems(mediaItems)

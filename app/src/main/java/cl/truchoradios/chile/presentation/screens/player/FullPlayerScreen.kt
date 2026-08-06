@@ -167,23 +167,23 @@ fun FullPlayerScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Volume slider
-                var volume by rememberSaveable { mutableFloatStateOf(playerManager.player.volume) }
+                // Volume slider (volumen del dispositivo Cast cuando se transmite)
+                val volume by playerManager.volume.collectAsState()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         Icons.Default.VolumeUp,
-                        contentDescription = "Volumen",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        contentDescription = if (isCasting) "Volumen del dispositivo" else "Volumen",
+                        tint = if (isCasting) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Slider(
                         value = volume,
                         onValueChange = { vol ->
-                            volume = vol
                             playerManager.setVolume(vol)
                         },
                         modifier = Modifier.weight(1f),

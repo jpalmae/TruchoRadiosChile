@@ -114,6 +114,18 @@ class RadioPlayerManager @Inject constructor(
     private var mediaController: MediaController? = null
 
     init {
+        if (castSwitcher != null) {
+            scope.launch {
+                castSwitcher.volumeFlow.collect { _volume.value = it }
+            }
+        } else {
+            player.addListener(object : Player.Listener {
+                override fun onVolumeChanged(volume: Float) {
+                    _volume.value = volume
+                }
+            })
+        }
+
         sessionPlayer.addListener(object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
                 _isCasting.value = castSwitcher?.isCasting == true
@@ -239,7 +251,9 @@ class RadioPlayerManager @Inject constructor(
     }
 
     fun setVolume(vol: Float) {
-        sessionPlayer.volume = vol.coerceIn(0f, 1f)
+        val clamped = vol.coerceIn(0f, 1f)
+        sessionPlayer.volume = clamped
+        _volume.value = clamped
     }
 
     fun scheduleSleepTimer(minutes: Int) {
