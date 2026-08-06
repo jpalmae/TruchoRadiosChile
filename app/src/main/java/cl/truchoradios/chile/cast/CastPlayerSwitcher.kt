@@ -8,6 +8,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.google.android.gms.cast.framework.CastContext
+import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,10 +31,33 @@ class CastPlayerSwitcher(
         override fun onEvents(player: Player, events: Player.Events) {
             if (player === currentPlayer) {
                 if (events.contains(Player.EVENT_VOLUME_CHANGED)) {
-                    volumeFlow.value = player.volume
+                    volumeFlow.value = currentVolume()
                 }
                 invalidateState()
             }
+        }
+    }
+
+    private val remoteMediaClient: RemoteMediaClient?
+        get() = runCatching {
+            CastContext.getSharedInstance()?.sessionManager?.currentCastSession?.remoteMediaClient
+        }.getOrNull()
+
+    private val castVolumeCallback = object : RemoteMediaClient.Callback() {
+        override fun onStatusUpdated() {
+            if (isCasting) {
+                remoteMediaClient?.mediaStatus?.streamVolume?.let {
+                    volumeFlow.value = it.toFloat()
+                }
+            }
+        }
+    }
+
+    private fun currentVolume(): Float {
+        return if (isCasting) {
+            remoteMediaClient?.mediaStatus?.streamVolume?.toFloat() ?: volumeFlow.value
+        } else {
+            localPlayer.volume
         }
     }
 
@@ -63,8 +88,18 @@ class CastPlayerSwitcher(
         oldPlayer.stop()
         oldPlayer.clearMediaItems()
 
+        if (newPlayer === castPlayer) {
+            remoteMediaClient?.registerCallback(castVolumeCallback)
+        } else {
+            remoteMediaClient?.unregisterCallback(castVolumeCallback)
+        }
+
         currentPlayer = newPlayer
-        volumeFlow.value = newPlayer.volume
+        volumeFlow.value = if (newPlayer === castPlayer) {
+            remoteMediaClient?.mediaStatus?.streamVolume?.toFloat() ?: volumeFlow.value
+        } else {
+            localPlayer.volume
+        }
 
         if (mediaItems.isNotEmpty()) {
             newPlayer.setMediaItems(mediaItems)
@@ -112,6 +147,7 @@ class CastPlayerSwitcher(
             .setIsLoading(isLoading)
             .setPlaylist(playlist)
             .setPlaylistMetadata(currentPlayer.playlistMetadata)
+            .setVolume(volumeFlow.value)
             .setContentPositionMs(currentPlayer.contentPosition.coerceAtLeast(0))
             .build()
     }
@@ -141,11 +177,19 @@ class CastPlayerSwitcher(
     }
 
     override fun handleSetVolume(volume: Float): ListenableFuture<*> {
-        currentPlayer.volume = volume
+        if (currentPlayer === castPlayer) {
+            // CastPlayer.setVolume de media3 es un no-op: el volumen del
+            // dispositivo se controla via RemoteMediaClient.
+            remoteMediaClient?.setStreamVolume(volume.toDouble())
+            volumeFlow.value = volume
+        } else {
+            currentPlayer.volume = volume
+        }
         return Futures.immediateVoidFuture()
     }
 
     override fun handleRelease(): ListenableFuture<*> {
+        remoteMediaClient?.unregisterCallback(castVolumeCallback)
         localPlayer.removeListener(forwardingListener)
         castPlayer.removeListener(forwardingListener)
         castPlayer.setSessionAvailabilityListener(null)
