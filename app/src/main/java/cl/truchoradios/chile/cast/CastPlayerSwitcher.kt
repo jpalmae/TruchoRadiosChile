@@ -8,7 +8,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.google.android.gms.cast.Cast
 import com.google.android.gms.cast.framework.CastContext
+import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -43,6 +45,13 @@ class CastPlayerSwitcher(
             CastContext.getSharedInstance()?.sessionManager?.currentCastSession?.remoteMediaClient
         }.getOrNull()
 
+    private val castSession: CastSession?
+        get() = runCatching {
+            CastContext.getSharedInstance()?.sessionManager?.currentCastSession as? CastSession
+        }.getOrNull()
+
+    private var activeCastSession: CastSession? = null
+
     private val castVolumeCallback = object : RemoteMediaClient.Callback() {
         override fun onStatusUpdated() {
             if (isCasting) {
@@ -53,9 +62,23 @@ class CastPlayerSwitcher(
         }
     }
 
+    private val castListener = object : Cast.Listener() {
+        override fun onVolumeChanged() {
+            if (isCasting) {
+                activeCastSession?.let {
+                    runCatching { it.volume.toFloat() }.onSuccess { v ->
+                        volumeFlow.value = v
+                    }
+                }
+            }
+        }
+    }
+
     private fun currentVolume(): Float {
         return if (isCasting) {
-            remoteMediaClient?.mediaStatus?.streamVolume?.toFloat() ?: volumeFlow.value
+            runCatching { activeCastSession?.volume?.toFloat() }.getOrNull()
+                ?: remoteMediaClient?.mediaStatus?.streamVolume?.toFloat()
+                ?: volumeFlow.value
         } else {
             localPlayer.volume
         }
