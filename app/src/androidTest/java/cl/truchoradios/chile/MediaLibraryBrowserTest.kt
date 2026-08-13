@@ -1,6 +1,7 @@
 package cl.truchoradios.chile
 
 import android.content.ComponentName
+import android.media.browse.MediaBrowser as PlatformMediaBrowser
 import android.os.Handler
 import android.os.HandlerThread
 import androidx.media3.common.Player
@@ -13,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -76,6 +78,42 @@ class MediaLibraryBrowserTest {
     }
 
     @Test
+    fun legacyBrowser_connectsAndGetsRoot() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val connected = CountDownLatch(1)
+        var connectionFailed = false
+        var rootId: String? = null
+        lateinit var legacyBrowser: PlatformMediaBrowser
+
+        instrumentation.runOnMainSync {
+            legacyBrowser = PlatformMediaBrowser(
+                context,
+                ComponentName(context, RadioPlayerService::class.java),
+                object : PlatformMediaBrowser.ConnectionCallback() {
+                    override fun onConnected() {
+                        rootId = legacyBrowser.root
+                        connected.countDown()
+                    }
+
+                    override fun onConnectionFailed() {
+                        connectionFailed = true
+                        connected.countDown()
+                    }
+                },
+                null
+            )
+            legacyBrowser.connect()
+        }
+
+        assertTrue("legacy browser did not connect in time", connected.await(10, TimeUnit.SECONDS))
+        assertFalse("legacy browser connection failed", connectionFailed)
+        assertEquals("trucho_root", rootId)
+
+        instrumentation.runOnMainSync { legacyBrowser.disconnect() }
+    }
+
+    @Test
     fun regions_genres_and_radios_areBrowsable(): Unit = runBlocking {
         waitForSeed()
 
@@ -101,6 +139,22 @@ class MediaLibraryBrowserTest {
         val results = onBrowserThread { browser.getSearchResult("biobio", 0, 50, null) }
             .get(20, TimeUnit.SECONDS).value.orEmpty()
         assertTrue(results.isNotEmpty())
+    }
+
+    @Test
+    fun children_respectRequestedPageSize(): Unit = runBlocking {
+        waitForSeed()
+
+        val firstPage = onBrowserThread { browser.getChildren("all", 0, 5, null) }
+            .get(20, TimeUnit.SECONDS).value.orEmpty()
+        val secondPage = onBrowserThread { browser.getChildren("all", 1, 5, null) }
+            .get(20, TimeUnit.SECONDS).value.orEmpty()
+
+        assertEquals(5, firstPage.size)
+        assertEquals(5, secondPage.size)
+        val duplicatedIds = firstPage.map { it.mediaId }.toSet()
+            .intersect(secondPage.map { it.mediaId }.toSet())
+        assertTrue(duplicatedIds.isEmpty())
     }
 
     @Test

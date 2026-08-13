@@ -15,6 +15,7 @@ import cl.truchoradios.chile.data.local.entity.RadioEntity
 import cl.truchoradios.chile.data.repository.RadioRepositoryImpl
 import cl.truchoradios.chile.player.RadioPlayerManager
 import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.AndroidEntryPoint
@@ -77,22 +78,23 @@ class RadioPlayerService : MediaLibraryService() {
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: LibraryParams?
-        ): ListenableFuture<LibraryResult<MediaItem>> = future {
-            LibraryResult.ofItem(
-                MediaItem.Builder()
-                    .setMediaId(ID_ROOT)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle("Trucho Radios Chile")
-                            .setIsBrowsable(true)
-                            .setIsPlayable(false)
-                            .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
-                            .build()
-                    )
-                    .build(),
-                params
+        ): ListenableFuture<LibraryResult<MediaItem>> =
+            Futures.immediateFuture(
+                LibraryResult.ofItem(
+                    MediaItem.Builder()
+                        .setMediaId(ID_ROOT)
+                        .setMediaMetadata(
+                            MediaMetadata.Builder()
+                                .setTitle("Trucho Radios Chile")
+                                .setIsBrowsable(true)
+                                .setIsPlayable(false)
+                                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                                .build()
+                        )
+                        .build(),
+                    params
+                )
             )
-        }
 
         override fun onGetChildren(
             session: MediaLibrarySession,
@@ -136,7 +138,7 @@ class RadioPlayerService : MediaLibraryService() {
                         .map { playableItem(it) }
                 else -> emptyList()
             }
-            LibraryResult.ofItemList(ImmutableList.copyOf(items), params)
+            LibraryResult.ofItemList(ImmutableList.copyOf(items.page(page, pageSize)), params)
         }
 
         override fun onGetItem(
@@ -171,7 +173,9 @@ class RadioPlayerService : MediaLibraryService() {
             pageSize: Int,
             params: LibraryParams?
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = future {
-            val items = repository.searchRadios(query).first().map { playableItem(it) }
+            val items = repository.searchRadios(query).first()
+                .map { playableItem(it) }
+                .page(page, pageSize)
             LibraryResult.ofItemList(ImmutableList.copyOf(items), params)
         }
 
@@ -196,6 +200,15 @@ class RadioPlayerService : MediaLibraryService() {
             }
         }
         return result
+    }
+
+    private fun <T> List<T>.page(page: Int, pageSize: Int): List<T> {
+        val fromIndex = page.toLong() * pageSize.toLong()
+        if (fromIndex >= size) return emptyList()
+
+        val start = fromIndex.toInt()
+        val end = (fromIndex + pageSize).coerceAtMost(size.toLong()).toInt()
+        return subList(start, end)
     }
 
     private fun folder(id: String, title: String): MediaItem =
