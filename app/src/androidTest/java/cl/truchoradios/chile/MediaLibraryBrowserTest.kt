@@ -2,14 +2,18 @@ package cl.truchoradios.chile
 
 import android.content.ComponentName
 import android.media.browse.MediaBrowser as PlatformMediaBrowser
+import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
+import androidx.annotation.OptIn
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.SessionToken
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import cl.truchoradios.chile.service.RadioPlayerService
+import cl.truchoradios.chile.service.HttpBitmapLoader
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -152,9 +156,56 @@ class MediaLibraryBrowserTest {
 
         assertEquals(5, firstPage.size)
         assertEquals(5, secondPage.size)
+        assertTrue(firstPage.all { it.mediaMetadata.artworkUri != null })
         val duplicatedIds = firstPage.map { it.mediaId }.toSet()
             .intersect(secondPage.map { it.mediaId }.toSet())
         assertTrue(duplicatedIds.isEmpty())
+    }
+
+    @OptIn(markerClass = [UnstableApi::class])
+    @Test
+    fun bundledArtwork_andFallback_canBeDecoded() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val loader = HttpBitmapLoader(context)
+
+        val bundled = loader.loadBitmap(
+            Uri.parse("file:///android_asset/radio_logos/carolina.gif")
+        ).get(10, TimeUnit.SECONDS)
+        val legacySvgReference = loader.loadBitmap(
+            Uri.parse(
+                "file:///android_asset/radio_logos/9632c4ae_0601_11e8_ae97_52543be04c81.svg"
+            )
+        ).get(10, TimeUnit.SECONDS)
+        val fallback = loader.loadBitmap(
+            Uri.parse("android.resource://${context.packageName}/drawable/trucho_logo")
+        ).get(10, TimeUnit.SECONDS)
+
+        assertTrue(bundled.width > 0 && bundled.height > 0)
+        assertEquals(512, legacySvgReference.width)
+        assertEquals(512, legacySvgReference.height)
+        assertTrue(fallback.width > 0 && fallback.height > 0)
+    }
+
+    @Test
+    fun selectedRadio_keepsArtworkMetadata(): Unit = runBlocking {
+        waitForSeed()
+        val radio = children("popular", 1).first()
+
+        onBrowserThread { browser.setMediaItem(radio) }
+
+        var selectedArtwork = onBrowserThread {
+            browser.currentMediaItem?.mediaMetadata?.artworkUri
+        }
+        var waited = 0L
+        while (selectedArtwork == null && waited < 3_000) {
+            delay(100)
+            waited += 100
+            selectedArtwork = onBrowserThread {
+                browser.currentMediaItem?.mediaMetadata?.artworkUri
+            }
+        }
+
+        assertNotNull(selectedArtwork)
     }
 
     @Test

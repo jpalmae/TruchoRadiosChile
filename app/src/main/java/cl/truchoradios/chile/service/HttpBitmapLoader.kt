@@ -4,7 +4,10 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import androidx.media3.common.util.BitmapLoader
+import androidx.media3.common.util.UnstableApi
+import cl.truchoradios.chile.R
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -21,6 +24,7 @@ import java.util.concurrent.Executors
  * Las descargas se hacen en segundo plano: loadBitmap es invocado en el hilo
  * principal de la sesion y bloquearlo congela toda la app (p.ej. Android Auto).
  */
+@UnstableApi
 class HttpBitmapLoader(private val context: Context) : BitmapLoader {
 
     private val cacheDir = File(context.cacheDir, "artwork").also { it.mkdirs() }
@@ -29,15 +33,23 @@ class HttpBitmapLoader(private val context: Context) : BitmapLoader {
     override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> =
         executor.submit<Bitmap> {
             try {
-                if (uri.scheme == "http" || uri.scheme == "https") {
-                    downloadAndCacheBitmap(uri.toString())
-                } else {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        BitmapFactory.decodeStream(input)
-                    } ?: throw RuntimeException("Cannot open: $uri")
+                val bitmap = when {
+                    uri.scheme == "http" || uri.scheme == "https" -> {
+                        downloadAndCacheBitmap(uri.toString())
+                    }
+                    uri.scheme == "file" && uri.path?.startsWith(ASSET_PATH_PREFIX) == true -> {
+                        loadAssetBitmap(uri)
+                    }
+                    else -> {
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            BitmapFactory.decodeStream(input)
+                        } ?: throw RuntimeException("Cannot open: $uri")
+                    }
                 }
+                scaleDown(bitmap)
             } catch (e: Exception) {
-                throw RuntimeException("Failed to load bitmap: $uri", e)
+                Log.w(TAG, "Failed to load artwork $uri; using fallback", e)
+                fallbackBitmap()
             }
         }
 
@@ -90,5 +102,42 @@ class HttpBitmapLoader(private val context: Context) : BitmapLoader {
         } finally {
             conn.disconnect()
         }
+    }
+
+    private fun loadAssetBitmap(uri: Uri): Bitmap {
+        val assetPath = Uri.decode(uri.path.orEmpty().removePrefix(ASSET_PATH_PREFIX))
+        require(assetPath.isNotBlank() && ".." !in assetPath) { "Invalid asset path: $uri" }
+        val bitmapPath = if (assetPath.endsWith(".svg", ignoreCase = true)) {
+            assetPath.substringBeforeLast('.') + ".png"
+        } else {
+            assetPath
+        }
+        return context.assets.open(bitmapPath).use { input ->
+            BitmapFactory.decodeStream(input)
+                ?: throw RuntimeException("Cannot decode asset: $bitmapPath")
+        }
+    }
+
+    private fun fallbackBitmap(): Bitmap =
+        BitmapFactory.decodeResource(context.resources, R.drawable.trucho_logo)
+            ?: throw RuntimeException("Cannot decode fallback artwork")
+
+    private fun scaleDown(bitmap: Bitmap): Bitmap {
+        val longestSide = maxOf(bitmap.width, bitmap.height)
+        if (longestSide <= MAX_ARTWORK_SIZE_PX) return bitmap
+
+        val scale = MAX_ARTWORK_SIZE_PX.toFloat() / longestSide
+        return Bitmap.createScaledBitmap(
+            bitmap,
+            (bitmap.width * scale).toInt().coerceAtLeast(1),
+            (bitmap.height * scale).toInt().coerceAtLeast(1),
+            true
+        )
+    }
+
+    private companion object {
+        const val TAG = "HttpBitmapLoader"
+        const val ASSET_PATH_PREFIX = "/android_asset/"
+        const val MAX_ARTWORK_SIZE_PX = 512
     }
 }

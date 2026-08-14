@@ -58,6 +58,7 @@ fun FullPlayerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isCasting by playerManager.isCasting.collectAsState()
+    val spectrumBands by playerManager.spectrumBands.collectAsState()
     val radio = uiState.radio
     val context = LocalContext.current
 
@@ -101,7 +102,8 @@ fun FullPlayerScreen(
                 Spacer(Modifier.height(16.dp))
 
                 SpectrumVisualizer(
-                    isPlaying = uiState.isPlaying,
+                    bands = spectrumBands,
+                    isPlaying = uiState.isPlaying && !isCasting,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
 

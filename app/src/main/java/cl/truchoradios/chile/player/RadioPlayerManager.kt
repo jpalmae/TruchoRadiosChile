@@ -13,6 +13,10 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -21,6 +25,7 @@ import cl.truchoradios.chile.data.local.entity.toDomain
 import cl.truchoradios.chile.data.repository.RadioRepositoryImpl
 import cl.truchoradios.chile.domain.model.Radio
 import cl.truchoradios.chile.domain.model.StreamType
+import cl.truchoradios.chile.media.resolveArtworkUri
 import cl.truchoradios.chile.service.RadioPlayerService
 import com.google.android.gms.cast.framework.CastContext
 import com.google.common.util.concurrent.ListenableFuture
@@ -52,7 +57,22 @@ class RadioPlayerManager @Inject constructor(
         .setReadTimeoutMs(15000)
         .setAllowCrossProtocolRedirects(true)
 
-    val player: ExoPlayer = ExoPlayer.Builder(context)
+    private val spectrumAnalyzer = AudioSpectrumAnalyzer()
+    val spectrumBands: StateFlow<List<Float>> = spectrumAnalyzer.bands
+
+    private val renderersFactory = object : DefaultRenderersFactory(context) {
+        override fun buildAudioSink(
+            context: Context,
+            enableFloatOutput: Boolean,
+            enableAudioTrackPlaybackParams: Boolean,
+        ): AudioSink = DefaultAudioSink.Builder(context)
+            .setEnableFloatOutput(enableFloatOutput)
+            .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+            .setAudioProcessors(arrayOf(TeeAudioProcessor(spectrumAnalyzer)))
+            .build()
+    }
+
+    val player: ExoPlayer = ExoPlayer.Builder(context, renderersFactory)
         .setAudioAttributes(AudioAttributes.DEFAULT, true)
         .setHandleAudioBecomingNoisy(true)
         .setMediaSourceFactory(
@@ -206,9 +226,7 @@ class RadioPlayerManager @Inject constructor(
             .setTitle(radio.name)
             .setArtist(radio.genres.joinToString(", ").ifBlank { "Radio Chilena" })
 
-        if (radio.imageUrl.isNotBlank() && radio.imageUrl.startsWith("http")) {
-            metadata.setArtworkUri(radio.imageUrl.toUri())
-        }
+        metadata.setArtworkUri(context.resolveArtworkUri(radio.imageUrl))
 
         val mediaItem = MediaItem.Builder()
             .setMediaId(radio.id)

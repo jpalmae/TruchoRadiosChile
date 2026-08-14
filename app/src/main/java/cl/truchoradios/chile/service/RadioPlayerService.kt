@@ -13,6 +13,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
 import cl.truchoradios.chile.data.local.entity.RadioEntity
 import cl.truchoradios.chile.data.repository.RadioRepositoryImpl
+import cl.truchoradios.chile.media.resolveArtworkUri
 import cl.truchoradios.chile.player.RadioPlayerManager
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -237,9 +238,7 @@ class RadioPlayerService : MediaLibraryService() {
             .setIsPlayable(true)
             .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
 
-        if (radio.imageUrl.startsWith("http")) {
-            metadata.setArtworkUri(radio.imageUrl.toUri())
-        }
+        metadata.setArtworkUri(resolveArtworkUri(radio.imageUrl))
 
         return MediaItem.Builder()
             .setMediaId(radio.id)
@@ -252,9 +251,7 @@ class RadioPlayerService : MediaLibraryService() {
             .setTitle(radio.name)
             .setArtist(radio.genres.ifBlank { "Radio Chilena" })
 
-        if (radio.imageUrl.startsWith("http")) {
-            metadata.setArtworkUri(radio.imageUrl.toUri())
-        }
+        metadata.setArtworkUri(resolveArtworkUri(radio.imageUrl))
 
         return MediaItem.Builder()
             .setMediaId(radio.id)
