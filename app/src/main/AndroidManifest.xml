@@ -50,5 +50,7 @@
             </intent-filter>
         </service>
 
+        <receiver android:name="androidx.mediarouter.media.MediaTransferReceiver" />
+
     </application>
 </manifest>

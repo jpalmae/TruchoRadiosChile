@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.core.net.toUri
 import androidx.media3.cast.CastPlayer
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.DeviceInfo
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
@@ -20,14 +21,12 @@ import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import cl.truchoradios.chile.cast.CastPlayerSwitcher
 import cl.truchoradios.chile.data.local.entity.toDomain
 import cl.truchoradios.chile.data.repository.RadioRepositoryImpl
 import cl.truchoradios.chile.domain.model.Radio
 import cl.truchoradios.chile.domain.model.StreamType
 import cl.truchoradios.chile.media.resolveArtworkUri
 import cl.truchoradios.chile.service.RadioPlayerService
-import com.google.android.gms.cast.framework.CastContext
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -92,23 +91,19 @@ class RadioPlayerManager @Inject constructor(
         )
         .build()
 
-    val castContext: CastContext? = runCatching {
-        CastContext.getSharedInstance(context)
+    private val castPlayer: CastPlayer? = runCatching {
+        CastPlayer.Builder(context)
+            .setLocalPlayer(player)
+            .build()
     }.getOrNull()
 
-    private val castPlayer: CastPlayer? = castContext?.let { ctx ->
-        runCatching { CastPlayer(ctx) }.getOrNull()
-    }
+    val isCastAvailable: Boolean get() = castPlayer != null
 
     @UnstableApi
-    private val castSwitcher: CastPlayerSwitcher? = castPlayer?.let {
-        CastPlayerSwitcher(player, it)
-    }
+    val sessionPlayer: Player = castPlayer ?: player
 
-    val isCastAvailable: Boolean get() = castSwitcher != null
-
-    @UnstableApi
-    val sessionPlayer: Player = castSwitcher ?: player
+    private fun isRemotePlayback(): Boolean =
+        sessionPlayer.deviceInfo.playbackType == DeviceInfo.PLAYBACK_TYPE_REMOTE
 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying
@@ -125,7 +120,7 @@ class RadioPlayerManager @Inject constructor(
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     val playbackState: StateFlow<PlaybackState> = _playbackState
 
-    private val _isCasting = MutableStateFlow(castSwitcher?.isCasting == true)
+    private val _isCasting = MutableStateFlow(isRemotePlayback())
     val isCasting: StateFlow<Boolean> = _isCasting
 
     private val _audioSessionId = MutableStateFlow(0)
@@ -138,7 +133,7 @@ class RadioPlayerManager @Inject constructor(
     private val _sleepTimerRemaining = MutableStateFlow(0L)
     val sleepTimerRemaining: StateFlow<Long> = _sleepTimerRemaining
 
-    private val _volume = MutableStateFlow(1f)
+    private val _volume = MutableStateFlow(sessionPlayer.volume)
     val volume: StateFlow<Float> = _volume
 
     // MediaController for foreground service + notification
@@ -146,27 +141,19 @@ class RadioPlayerManager @Inject constructor(
     private var mediaController: MediaController? = null
 
     init {
-        if (castSwitcher != null) {
-            scope.launch {
-                castSwitcher.volumeFlow.collect { _volume.value = it }
-            }
-            scope.launch {
-                castSwitcher.isCastingFlow.collect { casting ->
-                    _isCasting.value = casting
-                    syncPlaybackSnapshot()
-                }
-            }
-        } else {
-            player.addListener(object : Player.Listener {
-                override fun onVolumeChanged(volume: Float) {
-                    _volume.value = volume
-                }
-            })
-        }
-
         sessionPlayer.addListener(object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
-                _isCasting.value = castSwitcher?.isCasting == true
+                _isCasting.value = isRemotePlayback()
+            }
+
+            override fun onDeviceInfoChanged(deviceInfo: DeviceInfo) {
+                _isCasting.value = deviceInfo.playbackType == DeviceInfo.PLAYBACK_TYPE_REMOTE
+                _volume.value = sessionPlayer.volume
+                syncPlaybackSnapshot()
+            }
+
+            override fun onVolumeChanged(volume: Float) {
+                _volume.value = volume
             }
 
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -231,7 +218,7 @@ class RadioPlayerManager @Inject constructor(
     }
 
     private fun syncPlaybackSnapshot() {
-        _isCasting.value = castSwitcher?.isCasting == true
+        _isCasting.value = isRemotePlayback()
         _isPlaying.value = sessionPlayer.isPlaying
         _isBuffering.value = sessionPlayer.playbackState == Player.STATE_BUFFERING
         _error.value = sessionPlayer.playerError?.let { "Error al reproducir: ${it.message}" }

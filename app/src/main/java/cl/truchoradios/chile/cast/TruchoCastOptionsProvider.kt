@@ -11,7 +11,7 @@ class TruchoCastOptionsProvider : OptionsProvider {
     override fun getCastOptions(context: Context): CastOptions {
         return CastOptions.Builder()
             .setReceiverApplicationId(context.getString(R.string.cast_receiver_app_id))
-            .setResumeSavedSession(false)
+            .setResumeSavedSession(true)
             .setEnableReconnectionService(true)
             .build()
     }
