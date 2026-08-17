@@ -44,8 +44,10 @@ class FullPlayerViewModel @Inject constructor(
 
                 if (!hasAutoPlayed) {
                     hasAutoPlayed = true
-                    playerManager.play(radio)
-                    repository.addRecent(radioId)
+                    if (playerManager.getCurrentRadio()?.id != radio.id) {
+                        playerManager.play(radio)
+                        repository.addRecent(radioId)
+                    }
                 }
             }
         }

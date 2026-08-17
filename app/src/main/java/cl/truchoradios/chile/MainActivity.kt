@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import cl.truchoradios.chile.data.local.SettingsManager
 import cl.truchoradios.chile.navigation.TruchoNavHost
-import cl.truchoradios.chile.player.RadioPlayerManager
 import cl.truchoradios.chile.ui.theme.TruchoRadiosTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -19,7 +18,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
 
-    @Inject lateinit var playerManager: RadioPlayerManager
     @Inject lateinit var settingsManager: SettingsManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,14 +37,6 @@ class MainActivity : FragmentActivity() {
                     TruchoNavHost()
                 }
             }
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (isFinishing) {
-            playerManager.stop()
-            playerManager.release()
         }
     }
 }

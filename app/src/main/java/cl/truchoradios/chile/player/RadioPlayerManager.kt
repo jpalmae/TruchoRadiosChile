@@ -45,6 +45,18 @@ enum class PlaybackState {
     IDLE, BUFFERING, PLAYING, PAUSED, ERROR
 }
 
+internal fun shouldKeepCurrentRadio(
+    requestedRadioId: String,
+    currentRadioId: String?,
+    currentMediaId: String?,
+    playbackState: PlaybackState,
+): Boolean = (currentRadioId == requestedRadioId || currentMediaId == requestedRadioId) &&
+    playbackState in setOf(
+        PlaybackState.BUFFERING,
+        PlaybackState.PLAYING,
+        PlaybackState.PAUSED,
+    )
+
 @androidx.annotation.OptIn(UnstableApi::class)
 @Singleton
 class RadioPlayerManager @Inject constructor(
@@ -113,7 +125,7 @@ class RadioPlayerManager @Inject constructor(
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     val playbackState: StateFlow<PlaybackState> = _playbackState
 
-    private val _isCasting = MutableStateFlow(false)
+    private val _isCasting = MutableStateFlow(castSwitcher?.isCasting == true)
     val isCasting: StateFlow<Boolean> = _isCasting
 
     private val _audioSessionId = MutableStateFlow(0)
@@ -138,6 +150,12 @@ class RadioPlayerManager @Inject constructor(
             scope.launch {
                 castSwitcher.volumeFlow.collect { _volume.value = it }
             }
+            scope.launch {
+                castSwitcher.isCastingFlow.collect { casting ->
+                    _isCasting.value = casting
+                    syncPlaybackSnapshot()
+                }
+            }
         } else {
             player.addListener(object : Player.Listener {
                 override fun onVolumeChanged(volume: Float) {
@@ -153,7 +171,13 @@ class RadioPlayerManager @Inject constructor(
 
             override fun onIsPlayingChanged(playing: Boolean) {
                 _isPlaying.value = playing
-                if (playing) _playbackState.value = PlaybackState.PLAYING
+                when {
+                    playing -> _playbackState.value = PlaybackState.PLAYING
+                    sessionPlayer.playbackState == Player.STATE_READY &&
+                        sessionPlayer.currentMediaItem != null -> {
+                        _playbackState.value = PlaybackState.PAUSED
+                    }
+                }
             }
 
             override fun onPlaybackStateChanged(state: Int) {
@@ -162,7 +186,11 @@ class RadioPlayerManager @Inject constructor(
                     Player.STATE_BUFFERING -> _playbackState.value = PlaybackState.BUFFERING
                     Player.STATE_READY -> {
                         _error.value = null
-                        if (_isPlaying.value) _playbackState.value = PlaybackState.PLAYING
+                        _playbackState.value = if (sessionPlayer.isPlaying) {
+                            PlaybackState.PLAYING
+                        } else {
+                            PlaybackState.PAUSED
+                        }
                     }
                     Player.STATE_ENDED -> _playbackState.value = PlaybackState.IDLE
                 }
@@ -196,8 +224,34 @@ class RadioPlayerManager @Inject constructor(
             }
         })
 
+        syncPlaybackSnapshot()
+
         // Connect to MediaSession service for foreground + notification
         initMediaController()
+    }
+
+    private fun syncPlaybackSnapshot() {
+        _isCasting.value = castSwitcher?.isCasting == true
+        _isPlaying.value = sessionPlayer.isPlaying
+        _isBuffering.value = sessionPlayer.playbackState == Player.STATE_BUFFERING
+        _error.value = sessionPlayer.playerError?.let { "Error al reproducir: ${it.message}" }
+        _playbackState.value = when {
+            sessionPlayer.playerError != null -> PlaybackState.ERROR
+            sessionPlayer.playbackState == Player.STATE_BUFFERING -> PlaybackState.BUFFERING
+            sessionPlayer.isPlaying -> PlaybackState.PLAYING
+            sessionPlayer.playbackState == Player.STATE_READY &&
+                sessionPlayer.currentMediaItem != null -> PlaybackState.PAUSED
+            else -> PlaybackState.IDLE
+        }
+
+        val mediaId = sessionPlayer.currentMediaItem?.mediaId.orEmpty()
+        if (mediaId.isNotEmpty() && _currentRadio.value?.id != mediaId) {
+            scope.launch {
+                repository.getRadioById(mediaId)?.let { entity ->
+                    _currentRadio.value = entity.toDomain()
+                }
+            }
+        }
     }
 
     private fun initMediaController() {
@@ -214,6 +268,14 @@ class RadioPlayerManager @Inject constructor(
     }
 
     fun play(radio: Radio) {
+        if (shouldKeepCurrentRadio(
+                requestedRadioId = radio.id,
+                currentRadioId = _currentRadio.value?.id,
+                currentMediaId = sessionPlayer.currentMediaItem?.mediaId,
+                playbackState = _playbackState.value,
+            )
+        ) return
+
         _error.value = null
         _isBuffering.value = true
         _currentRadio.value = radio

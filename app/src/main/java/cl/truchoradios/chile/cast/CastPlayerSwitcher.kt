@@ -15,6 +15,8 @@ import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 @UnstableApi
 class CastPlayerSwitcher(
@@ -22,10 +24,17 @@ class CastPlayerSwitcher(
     private val castPlayer: CastPlayer,
 ) : SimpleBasePlayer(localPlayer.applicationLooper) {
 
-    private var currentPlayer: Player = localPlayer
+    private var currentPlayer: Player = if (castPlayer.isCastSessionAvailable) {
+        castPlayer
+    } else {
+        localPlayer
+    }
 
     val isCasting: Boolean
         get() = currentPlayer === castPlayer
+
+    private val _isCastingFlow = MutableStateFlow(isCasting)
+    val isCastingFlow: StateFlow<Boolean> = _isCastingFlow.asStateFlow()
 
     val volumeFlow = MutableStateFlow(localPlayer.volume)
 
@@ -51,11 +60,12 @@ class CastPlayerSwitcher(
         }.getOrNull()
 
     private var activeCastSession: CastSession? = null
+    private var activeRemoteMediaClient: RemoteMediaClient? = null
 
     private val castVolumeCallback = object : RemoteMediaClient.Callback() {
         override fun onStatusUpdated() {
             if (isCasting) {
-                remoteMediaClient?.mediaStatus?.streamVolume?.let {
+                activeRemoteMediaClient?.mediaStatus?.streamVolume?.let {
                     volumeFlow.value = it.toFloat()
                 }
             }
@@ -77,7 +87,7 @@ class CastPlayerSwitcher(
     private fun currentVolume(): Float {
         return if (isCasting) {
             runCatching { activeCastSession?.volume?.toFloat() }.getOrNull()
-                ?: remoteMediaClient?.mediaStatus?.streamVolume?.toFloat()
+                ?: activeRemoteMediaClient?.mediaStatus?.streamVolume?.toFloat()
                 ?: volumeFlow.value
         } else {
             localPlayer.volume
@@ -96,10 +106,18 @@ class CastPlayerSwitcher(
                 switchTo(localPlayer)
             }
         })
+        // A Cast session can already be restored before this listener is installed.
+        switchTo(if (castPlayer.isCastSessionAvailable) castPlayer else localPlayer)
     }
 
     private fun switchTo(newPlayer: Player) {
-        if (currentPlayer === newPlayer) return
+        if (currentPlayer === newPlayer) {
+            if (newPlayer === castPlayer) attachCastSession() else detachCastSession()
+            _isCastingFlow.value = newPlayer === castPlayer
+            volumeFlow.value = currentVolume()
+            invalidateState()
+            return
+        }
 
         val oldPlayer = currentPlayer
         val mediaItems = mutableListOf<MediaItem>()
@@ -107,30 +125,53 @@ class CastPlayerSwitcher(
             mediaItems.add(oldPlayer.getMediaItemAt(i))
         }
         val playWhenReady = oldPlayer.playWhenReady
+        val shouldAdoptExistingCast = newPlayer === castPlayer &&
+            (castPlayer.mediaItemCount > 0 || remoteMediaClient?.hasMediaSession() == true)
 
+        currentPlayer = newPlayer
+        _isCastingFlow.value = newPlayer === castPlayer
         oldPlayer.stop()
         oldPlayer.clearMediaItems()
 
         if (newPlayer === castPlayer) {
-            remoteMediaClient?.registerCallback(castVolumeCallback)
+            attachCastSession()
         } else {
-            remoteMediaClient?.unregisterCallback(castVolumeCallback)
+            detachCastSession()
         }
 
-        currentPlayer = newPlayer
         volumeFlow.value = if (newPlayer === castPlayer) {
-            remoteMediaClient?.mediaStatus?.streamVolume?.toFloat() ?: volumeFlow.value
+            currentVolume()
         } else {
             localPlayer.volume
         }
 
-        if (mediaItems.isNotEmpty()) {
+        // Do not reload an existing remote queue when the app is reopened.
+        if (!shouldAdoptExistingCast && mediaItems.isNotEmpty()) {
             newPlayer.setMediaItems(mediaItems)
             newPlayer.prepare()
             newPlayer.playWhenReady = playWhenReady
         }
 
         invalidateState()
+    }
+
+    private fun attachCastSession() {
+        val session = castSession
+        val mediaClient = session?.remoteMediaClient
+        if (session === activeCastSession && mediaClient === activeRemoteMediaClient) return
+
+        detachCastSession()
+        activeCastSession = session
+        activeRemoteMediaClient = mediaClient
+        runCatching { session?.addCastListener(castListener) }
+        mediaClient?.registerCallback(castVolumeCallback)
+    }
+
+    private fun detachCastSession() {
+        activeRemoteMediaClient?.unregisterCallback(castVolumeCallback)
+        runCatching { activeCastSession?.removeCastListener(castListener) }
+        activeRemoteMediaClient = null
+        activeCastSession = null
     }
 
     override fun getState(): State {
@@ -203,7 +244,7 @@ class CastPlayerSwitcher(
         if (currentPlayer === castPlayer) {
             // CastPlayer.setVolume de media3 es un no-op: el volumen del
             // dispositivo se controla via RemoteMediaClient.
-            remoteMediaClient?.setStreamVolume(volume.toDouble())
+            activeRemoteMediaClient?.setStreamVolume(volume.toDouble())
             volumeFlow.value = volume
         } else {
             currentPlayer.volume = volume
@@ -212,7 +253,7 @@ class CastPlayerSwitcher(
     }
 
     override fun handleRelease(): ListenableFuture<*> {
-        remoteMediaClient?.unregisterCallback(castVolumeCallback)
+        detachCastSession()
         localPlayer.removeListener(forwardingListener)
         castPlayer.removeListener(forwardingListener)
         castPlayer.setSessionAvailabilityListener(null)
