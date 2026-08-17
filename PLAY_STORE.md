@@ -6,10 +6,11 @@
 |---|---|
 | **App name** | Trucho Radios Chile |
 | **Package name** | cl.truchoradios.chile |
-| **AAB** | `TruchoRadiosChile.aab` (7.1 MB) |
+| **Versión** | 1.2.5 (código 8) |
+| **AAB** | `app/build/outputs/bundle/release/app-release.aab` |
 | **Keystore** | `trucho-release-key.jks` |
 | **Key alias** | trucho |
-| **Key password** | trucho2025 |
+| **Credenciales** | Solo en `local.properties` (excluido de Git) |
 | **Min SDK** | 24 (Android 7.0) |
 | **Target SDK** | 36 (Android 16) |
 
@@ -34,6 +35,8 @@ Escucha más de 270 emisoras de radio de Chile en vivo, organizadas por región 
 • Controles de retroceso (10s, 30s, 60s) cuando el stream lo permite
 • Mini reproductor para controlar sin salir de la app
 • Funciona en segundo plano mientras usas otras apps
+• Compatible con Android Auto
+• Envía la reproducción a Google Cast y Google Home
 • Interfaz moderna y fácil de usar
 
 📻 RADIOS POPULARES:
@@ -92,7 +95,7 @@ Trucho Radios Chile
 
 ### Política de Privacidad — Trucho Radios Chile
 
-**Última actualización:** Mayo 2025
+**Última actualización:** Agosto 2026
 
 **Información que recopilamos:**
 - Trucho Radios Chile NO recopila información personal del usuario.
@@ -103,6 +106,7 @@ Trucho Radios Chile
 - `INTERNET` — Para conectarse a los streams de radio en vivo.
 - `FOREGROUND_SERVICE` — Para reproducir audio en segundo plano.
 - `FOREGROUND_SERVICE_MEDIA_PLAYBACK` — Control del servicio de reproducción.
+- `POST_NOTIFICATIONS` — Para mostrar los controles de reproducción, cuando el usuario lo autoriza.
 
 **Servicios de terceros:**
 - Los streams de radio provienen de fuentes públicas (radio-browser.info y sitios web de las emisoras).
@@ -157,6 +161,6 @@ Necesitarás subir **mínimo 4 capturas** (formato PNG o JPEG):
 | Archivo | Ubicación |
 |---|---|
 | 🔐 Keystore | `trucho-release-key.jks` |
-| 📦 AAB (Play Store) | `TruchoRadiosChile.aab` (7.1 MB) |
-| 📱 APK (pruebas) | `TruchoRadiosChile.apk` (26 MB) |
+| 📦 AAB (Play Store) | `app/build/outputs/bundle/release/app-release.aab` |
+| 📱 APK (pruebas) | `app/build/outputs/apk/release/app-release.apk` |
 | 📋 Este documento | `PLAY_STORE.md` |

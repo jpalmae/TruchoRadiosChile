@@ -26,3 +26,5 @@ play_store_assets/
 
 # OS files
 Thumbs.db
+# macOS Finder custom-folder icon metadata (name ends in a control character)
+Icon?

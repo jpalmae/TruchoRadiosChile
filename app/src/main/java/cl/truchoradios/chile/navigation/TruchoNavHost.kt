@@ -32,6 +32,7 @@ import cl.truchoradios.chile.presentation.screens.player.FullPlayerScreen
 import cl.truchoradios.chile.presentation.screens.radiolist.RadioListScreen
 import cl.truchoradios.chile.presentation.screens.search.SearchScreen
 import cl.truchoradios.chile.presentation.screens.settings.SettingsScreen
+import cl.truchoradios.chile.presentation.screens.settings.PrivacyPolicyScreen
 import cl.truchoradios.chile.player.RadioPlayerManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -41,6 +42,7 @@ object Routes {
     const val FAVORITES = "favorites"
     const val SEARCH = "search"
     const val SETTINGS = "settings"
+    const val PRIVACY = "privacy"
     const val PLAYER = "player/{radioId}"
     const val RADIO_LIST = "radios/{filterType}/{filterValue}"
 
@@ -116,9 +118,14 @@ fun TruchoNavHost(
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     onBack = { navController.popBackStack() },
+                    onPrivacyClick = { navController.navigate(Routes.PRIVACY) },
                     settingsManager = settingsManager,
                     playerManager = playerManager,
                 )
+            }
+
+            composable(Routes.PRIVACY) {
+                PrivacyPolicyScreen(onBack = { navController.popBackStack() })
             }
 
             composable(
