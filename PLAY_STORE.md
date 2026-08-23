@@ -95,11 +95,11 @@ Trucho Radios Chile
 
 ### Política de Privacidad — Trucho Radios Chile
 
-**Última actualización:** Agosto 2026
+**Última actualización:** 23 de agosto de 2026
 
 **Información que recopilamos:**
-- Trucho Radios Chile NO recopila información personal del usuario.
-- NO recopilamos nombre, email, ubicación, ni datos de dispositivo.
+- La app no solicita cuentas y el desarrollador no recibe ni conserva nombres, email, ubicación precisa u otros datos de identificación personal.
+- Google Cast recopila automáticamente actividad anonimizada de Cast e información técnica del dispositivo, del SDK y de la app.
 - Las radios favoritas y el historial se almacenan exclusivamente en tu dispositivo.
 
 **Permisos que usa la app:**
@@ -110,10 +110,11 @@ Trucho Radios Chile
 
 **Servicios de terceros:**
 - Los streams de radio provienen de fuentes públicas (radio-browser.info y sitios web de las emisoras).
-- No usamos servicios de analytics, publicidad ni tracking.
+- Los servidores de las emisoras pueden recibir la dirección IP y el agente de usuario propios de una conexión de red.
+- Google Cast transmite registros técnicos cifrados a Google para análisis agregado de uso, rendimiento y fallas. No se utilizan para publicidad ni seguimiento individual y el SDK no los comparte con terceros.
 
 **Datos de menores:**
-- Esta app es apta para todos los públicos y NO recopila datos de menores.
+- Esta app no solicita deliberadamente datos personales de menores. La recopilación técnica anonimizada de Google Cast se aplica cuando se utiliza esa integración.
 
 **Contacto:**
 - Email: truchoradioschile@gmail.com

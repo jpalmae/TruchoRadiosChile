@@ -44,10 +44,10 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Última actualización: 17 de agosto de 2026")
+            Text("Última actualización: 23 de agosto de 2026")
             PrivacySection(
                 "Tu privacidad",
-                "Trucho Radios Chile no solicita una cuenta y no recopila, almacena ni comparte información personal con fines publicitarios, analíticos o de seguimiento.",
+                "Trucho Radios Chile no solicita una cuenta. El desarrollador no recibe ni conserva nombres, correos electrónicos, ubicaciones precisas u otros datos de identificación personal, ni utiliza los datos para publicidad o seguimiento individual.",
             )
             PrivacySection(
                 "Datos en el dispositivo",
@@ -55,7 +55,7 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
             )
             PrivacySection(
                 "Conexiones de terceros",
-                "La app se conecta a las transmisiones públicas de las emisoras. Esos servidores pueden recibir datos técnicos habituales de una conexión, como la dirección IP y el agente de usuario, conforme a sus propias políticas. Google Cast usa los servicios de Google Play y el dispositivo receptor elegido por ti.",
+                "La app se conecta a transmisiones públicas de emisoras cuyos servidores pueden recibir datos técnicos habituales, como la dirección IP y el agente de usuario. Google Cast recopila automáticamente actividad anonimizada de Cast e información técnica del dispositivo, del SDK y de la app. Google cifra esos registros y los usa de forma agregada para analizar el uso, medir el rendimiento y detectar fallas. No contienen identificadores asociados a una persona ni se comparten con terceros, pero esta recopilación del SDK no se puede desactivar ni eliminar.",
             )
             PrivacySection(
                 "Permisos",

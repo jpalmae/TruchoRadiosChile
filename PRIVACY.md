@@ -1,8 +1,8 @@
 # Política de privacidad de Trucho Radios Chile
 
-**Última actualización: 17 de agosto de 2026**
+**Última actualización: 23 de agosto de 2026**
 
-Trucho Radios Chile permite escuchar emisoras de radio por Internet. La aplicación no solicita la creación de una cuenta y no recopila, almacena ni comparte información personal del usuario con fines publicitarios, analíticos o de seguimiento.
+Trucho Radios Chile permite escuchar emisoras de radio por Internet. La aplicación no solicita la creación de una cuenta. El desarrollador no recibe ni conserva nombres, correos electrónicos, ubicaciones precisas u otros datos de identificación personal, ni utiliza los datos para publicidad o seguimiento individual.
 
 ## Datos almacenados en el dispositivo
 
@@ -12,7 +12,7 @@ Las emisoras favoritas, el historial de radios recientes y las preferencias de l
 
 La aplicación se conecta a Internet para reproducir transmisiones públicas proporcionadas por emisoras de radio y directorios de radios. Al iniciar una transmisión, el servidor que la distribuye puede recibir información técnica habitual de una conexión de red, como la dirección IP y el agente de usuario, conforme a la política del proveedor correspondiente.
 
-La función Google Cast utiliza los servicios de Google Play y dispositivos compatibles para enviar la reproducción elegida por el usuario. Su funcionamiento está sujeto a las políticas de privacidad de Google y del dispositivo receptor.
+La función Google Cast utiliza los servicios de Google Play y dispositivos compatibles para enviar la reproducción elegida por el usuario. El SDK de Google Cast recopila automáticamente actividad anonimizada relacionada con el descubrimiento y las sesiones de Cast, además de información técnica del dispositivo, del SDK y de la aplicación. Google transmite estos registros cifrados a sus servidores y los utiliza de forma agregada para analizar el uso, medir el rendimiento y detectar fallas del producto. Estos registros no contienen identificadores que permitan a Google asociarlos con un usuario específico y no se comparten con terceros, pero el usuario y el desarrollador no pueden desactivar ni eliminar esta recopilación del SDK.
 
 ## Permisos
 
@@ -22,7 +22,7 @@ La función Google Cast utiliza los servicios de Google Play y dispositivos comp
 
 ## Menores
 
-La aplicación no recopila deliberadamente datos personales de menores ni de otros usuarios.
+La aplicación no solicita deliberadamente datos personales de menores ni de otros usuarios. La recopilación técnica anonimizada de Google Cast descrita anteriormente se aplica cuando se utiliza la integración correspondiente.
 
 ## Conservación y eliminación
 
