@@ -2,9 +2,12 @@ package cl.truchoradios.chile.player
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.core.net.toUri
 import androidx.media3.cast.CastPlayer
+import androidx.media3.cast.DefaultCastPlayerTransferCallback
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.DeviceInfo
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -26,8 +29,10 @@ import cl.truchoradios.chile.data.repository.RadioRepositoryImpl
 import cl.truchoradios.chile.domain.model.Radio
 import cl.truchoradios.chile.domain.model.StreamType
 import cl.truchoradios.chile.media.resolveArtworkUri
+import cl.truchoradios.chile.service.HttpBitmapLoader
 import cl.truchoradios.chile.service.RadioPlayerService
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -91,9 +97,29 @@ class RadioPlayerManager @Inject constructor(
         )
         .build()
 
+    /**
+     * The default callback copies the active item to the Cast receiver, but an internet radio
+     * stream may remain queued after the route changes. Preparing and resuming it explicitly
+     * ensures that a radio already playing on the phone starts on the receiver as well.
+     */
+    private val castTransferCallback = object : CastPlayer.TransferCallback {
+        private val delegate = DefaultCastPlayerTransferCallback()
+
+        override fun transferState(sourcePlayer: Player, targetPlayer: Player) {
+            val shouldResume = sourcePlayer.playWhenReady
+            delegate.transferState(sourcePlayer, targetPlayer)
+
+            if (shouldResume && targetPlayer.mediaItemCount > 0) {
+                targetPlayer.prepare()
+                targetPlayer.play()
+            }
+        }
+    }
+
     private val castPlayer: CastPlayer? = runCatching {
         CastPlayer.Builder(context)
             .setLocalPlayer(player)
+            .setTransferCallback(castTransferCallback)
             .build()
     }.getOrNull()
 
@@ -135,6 +161,10 @@ class RadioPlayerManager @Inject constructor(
 
     private val _volume = MutableStateFlow(sessionPlayer.volume)
     val volume: StateFlow<Float> = _volume
+
+    // Android Auto's secondary media surface doesn't reliably fetch remote artwork URIs.
+    // Keep the URI for clients that support it, then publish decoded artwork data as well.
+    private val artworkLoader = HttpBitmapLoader(context)
 
     // MediaController for foreground service + notification
     private var mediaControllerFuture: ListenableFuture<MediaController>? = null
@@ -185,6 +215,10 @@ class RadioPlayerManager @Inject constructor(
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 val mediaId = mediaItem?.mediaId.orEmpty()
+                mediaItem?.mediaMetadata
+                    ?.takeIf { it.artworkData == null }
+                    ?.artworkUri
+                    ?.let { artworkUri -> publishEmbeddedArtwork(mediaId, artworkUri) }
                 if (mediaId.isNotEmpty() && _currentRadio.value?.id != mediaId) {
                     scope.launch {
                         repository.getRadioById(mediaId)?.let { entity ->
@@ -296,6 +330,36 @@ class RadioPlayerManager @Inject constructor(
         sessionPlayer.playWhenReady = true
     }
 
+    private fun publishEmbeddedArtwork(mediaId: String, artworkUri: android.net.Uri) {
+        if (mediaId.isBlank() || isRemotePlayback()) return
+
+        val artworkFuture = artworkLoader.loadBitmap(artworkUri)
+        artworkFuture.addListener({
+            val artworkData = runCatching {
+                artworkFuture.get().toArtworkData()
+            }.getOrNull() ?: return@addListener
+
+            scope.launch {
+                val currentIndex = sessionPlayer.currentMediaItemIndex
+                val currentItem = sessionPlayer.currentMediaItem
+                if (currentIndex == C.INDEX_UNSET || currentItem?.mediaId != mediaId) return@launch
+
+                val updatedMetadata = currentItem.mediaMetadata.buildUpon()
+                    .setArtworkData(artworkData, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                    .build()
+                sessionPlayer.replaceMediaItem(
+                    currentIndex,
+                    currentItem.buildUpon().setMediaMetadata(updatedMetadata).build()
+                )
+            }
+        }, MoreExecutors.directExecutor())
+    }
+
+    private fun Bitmap.toArtworkData(): ByteArray = ByteArrayOutputStream().use { output ->
+        compress(Bitmap.CompressFormat.JPEG, ARTWORK_JPEG_QUALITY, output)
+        output.toByteArray()
+    }
+
     fun pause() {
         sessionPlayer.playWhenReady = false
         _isPlaying.value = false
@@ -345,5 +409,9 @@ class RadioPlayerManager @Inject constructor(
 
     fun release() {
         sessionPlayer.release()
+    }
+
+    private companion object {
+        const val ARTWORK_JPEG_QUALITY = 85
     }
 }

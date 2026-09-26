@@ -16,8 +16,8 @@ android {
         applicationId = "cl.truchoradios.chile"
         minSdk = 24
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.2.5"
+        versionCode = 11
+        versionName = "1.2.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -38,6 +38,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -58,6 +61,14 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    packaging {
+        jniLibs {
+            // Use the locally compiled AndroidX Path binary, which preserves the debug
+            // metadata required for native crash and ANR symbolication in Play Console.
+            pickFirsts += "**/libandroidx.graphics.path.so"
+        }
     }
 }
 
