@@ -1,6 +1,14 @@
 version: 2
+
 updates:
-  - package-ecosystem: "gradle"
-    directory: "/"
+  # gradle deps
+  - package-ecosystem: gradle
+    directory: /
     schedule:
-      interval: "daily"
+      interval: daily
+    open-pull-requests-limit: 5
+    groups:
+      patch-minor:
+        update-types:
+          - patch
+          - minor
